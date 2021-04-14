@@ -19,6 +19,38 @@ namespace autotuner
         }
     };
 
+
+    template<typename Container, typename T, size_t Is, size_t Size>
+    struct sample {
+        template<typename Tuple>
+        static void sample_imp(Tuple& tuple) {
+            std::cout << "None" << std::endl;
+        }
+    };
+
+    template<typename T, size_t Index, size_t Size>
+    struct sample<skepu::Matrix<T>, T, Index, Size> {
+        template<typename Tuple>
+        static void sample_imp(Tuple& tuple) {
+            std::cout << "Matrix" << std::endl;
+        }
+    };
+
+    template<typename T, size_t Index, size_t Size>
+    struct sample<skepu::Vector<T>, T, Index, Size> {
+        template<typename Tuple>
+        static void sample_imp(Tuple& tuple) {
+            std::cout << "Vector" << std::endl;
+        }
+    };
+
+
+    template<typename Tuple>
+    struct sample_from_tuple {
+        
+    };
+
+
     
     // template<size_t... Ns, typename std::enable_if<sizeof...(Ns) == 0>::type>
     // void print_them() {}
@@ -37,7 +69,10 @@ namespace autotuner
     template<bool PrefersMatrix, typename T> 
     using PreferedContainer = typename std::conditional<PrefersMatrix, skepu::Matrix<T>, skepu::Vector<T>>::type;
 
-
+    template<bool PrefersMatrix, typename TupleType>
+    using ArgContainerTup = typename std::conditional<PrefersMatrix, 
+                                    typename add_container_layer<skepu::template Matrix, TupleType>::type,
+                                    typename add_container_layer<skepu::template Vector, TupleType>::type>::type;
 
     template<typename Skeleton, size_t... OI, size_t... EI, size_t... AI, size_t... CI>
     void tune(Skeleton& skeleton, pack_indices<OI...> oi, pack_indices<EI...> ei, pack_indices<AI...> ai, pack_indices<CI...> ci) 
@@ -53,8 +88,11 @@ namespace autotuner
         //print_them<EI...>();
         //print_them<AI...>();
         //print_them<CI...>();
-        PreferedContainer<Skeleton::prefers_matrix, int> hi{};
-        
+        static constexpr bool pm = Skeleton::prefers_matrix;
+
+        PreferedContainer<pm, int> hi{};
+        ArgContainerTup<pm, typename Skeleton::ElwiseArgs> elwiseArg;
+
         print<EI...>::_print();
     }
 
