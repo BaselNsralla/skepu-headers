@@ -2,6 +2,7 @@
 #include <tuple>
 #include <iostream>
 #include <type_traits>
+#include <algorithm>
 
 namespace autotuner
 {
@@ -20,36 +21,77 @@ namespace autotuner
     };
 
 
-    template<typename Container, typename T, size_t Is, size_t Size>
-    struct sample {
+    // template<typename Container, typename T, size_t Is, size_t Size>
+    // struct sample {
+    //     template<typename Tuple>
+    //     static void sample_imp(Tuple& tuple) {
+    //         std::cout << "None" << std::endl;
+    //     }
+    // };
+
+    // template<typename T, size_t Index, size_t Size>
+    // struct sample<skepu::Matrix<T>, T, Index, Size> {
+    //     template<typename Tuple>
+    //     static void sample_imp(Tuple& tuple) {
+    //         std::cout << "Matrix" << std::endl;
+    //     }
+    // };
+
+    // template<typename T, size_t Index, size_t Size>
+    // struct sample<skepu::Vector<T>, T, Index, Size> {
+    //     template<typename Tuple>
+    //     static void sample_imp(Tuple& tuple) {
+    //         std::cout << "Vector" << std::endl;
+    //     }
+    // };
+
+
+
+    template<typename T>
+    void sample_impl(skepu::Matrix<T>& vec) {
+        std::cout << "Vector" << std::endl;
+    }
+
+    template<typename T>
+    void sample_impl(skepu::Vector<T>& vec) {
+        std::cout << "Vector" << std::endl;
+    }
+    
+    template<size_t Index>
+    struct foreach 
+    {    
+        // template<typename Tuple, typename... Extra>
+        // static void apply(Tuple& tup, Extra&&... extras) {
+        //     sample_impl(std::get<Index>(tup), std::forward<Extra>(extras)...);
+        //     foreach<Index-1>::apply(tup, std::forward<Extra>(extras)...);
+        // }
+
         template<typename Tuple>
-        static void sample_imp(Tuple& tuple) {
-            std::cout << "None" << std::endl;
+        static void apply(Tuple& tup) {
+            sample_impl(std::get<Index - 1>(tup));
+            foreach<Index-1>::apply(tup);
         }
     };
 
-    template<typename T, size_t Index, size_t Size>
-    struct sample<skepu::Matrix<T>, T, Index, Size> {
+    template<>
+    struct foreach<0>
+    {
+        // template<typename Tuple, typename... Extra>
+        // static void apply(Tuple& tup, Extra&&... extras) {}
+
         template<typename Tuple>
-        static void sample_imp(Tuple& tuple) {
-            std::cout << "Matrix" << std::endl;
-        }
+        static void apply(Tuple& tup) {}
     };
+    
 
-    template<typename T, size_t Index, size_t Size>
-    struct sample<skepu::Vector<T>, T, Index, Size> {
-        template<typename Tuple>
-        static void sample_imp(Tuple& tuple) {
-            std::cout << "Vector" << std::endl;
-        }
-    };
-
-
-    template<typename Tuple>
-    struct sample_from_tuple {
-        
-    };
-
+    template<typename Tuple, size_t... Idx>
+    void sample(Tuple& tup, pack_indices<Idx...> ) {
+        //size_t l = { (sample_impl(std::get<Idx>(tup)), 0)..., 0 };
+        std::initializer_list<size_t> indicies = {Idx...};
+        //auto m = std::max(indicies, [](size_t const& a, size_t const& b) { return a < b; });
+        std::cout << std::tuple_size<Tuple>::value - 1 << std::endl;
+        foreach< std::template tuple_size<Tuple>::value >::apply(tup);
+    }
 
     
     // template<size_t... Ns, typename std::enable_if<sizeof...(Ns) == 0>::type>
@@ -92,7 +134,7 @@ namespace autotuner
 
         PreferedContainer<pm, int> hi{};
         ArgContainerTup<pm, typename Skeleton::ElwiseArgs> elwiseArg;
-
+        sample(elwiseArg, ei);
         print<EI...>::_print();
     }
 
