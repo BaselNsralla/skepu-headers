@@ -8,15 +8,15 @@ namespace autotuner
 {
     // borde lösas med struktar
     template<size_t...>
-    struct print {    
-        static void _print() {}
+    struct print_index {    
+        static void print() {}
     };
 
     template<size_t t, size_t... things>
-    struct print<t, things...> {    
-        static void _print() {
+    struct print_index<t, things...> {    
+        static void print() {
             std::cout << "A size: " << t << std::endl;
-            print<things...>::_print();
+            print_index<things...>::print();
         }
     };
 
@@ -32,8 +32,6 @@ namespace autotuner
             std::cout << val << std::endl;
         }
     }
-
-
 
     template<typename T>
     void sample_impl(skepu::Matrix<T>& vec) {
@@ -130,7 +128,7 @@ namespace autotuner
         //sample_all(elwiseArg, ei);
         //sample_all(containerArg, ci);
         //sample_all(uniArg, ui);
-        print<EI...>::_print();
+        print_index<EI...>::print();
         std::cout << "============" << std::endl;
     }
 
