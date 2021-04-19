@@ -45,7 +45,7 @@ namespace autotuner
     template<typename T>
     void sample_impl(skepu::Vector<T>& vec) {
         std::cout << "Vector Sample" << std::endl;
-        vec.init(300000, T{}); // Eller utan T{}
+        vec.init(30000000, T{}); // Eller utan T{}
     }
     
     template<size_t Index>
@@ -132,7 +132,33 @@ namespace autotuner
         //sample_all(elwiseArg, ei);
         //sample_all(containerArg, ci);
         //sample_all(uniArg, ui);
-    	for (auto backend : skepu::Backend::availableTypes())
+        
+        size_t repeats = 5; 
+        size_t size = 0;
+        auto mintime = benchmark::TimeSpan::max();
+        auto backendTypes = Backend::availableTypes();
+        std::vector<BackendSpec> specs(backendTypes.size());
+        std::transform(backendTypes.begin(), backendTypes.end(), specs.begin(), [](Backend::Type& type) {
+            return BackendSpec(type);
+        });
+    	benchmark::measureForEachBackend(repeats, size, specs, 
+            [&](size_t, BackendSpec spec) {
+                skeleton.setBackend(spec);
+                //std::cout << "INVONKLING " << std::endl;
+                // Smple with given size?
+                skeleton(std::get<OI>(resultArg)...,
+                std::get<EI>(elwiseArg)...,
+                std::get<CI>(containerArg)...,
+                std::get<UI>(uniArg)...);
+            },
+            [](benchmark::TimeSpan duration){
+                std::cout << "Benchmark duration " << duration.count() << std::endl; 
+            },
+            [](Backend::Type backend, benchmark::TimeSpan duration){
+                std::cout << "Median " << backend << " Took " << duration.count() << std::endl;     
+            });
+        
+        for (auto backend : skepu::Backend::availableTypes())
 		{
             skepu::BackendSpec spec(backend);
 			skeleton.setBackend(spec);
@@ -141,10 +167,10 @@ namespace autotuner
                     std::get<EI>(elwiseArg)...,
                     std::get<CI>(containerArg)...,
                     std::get<UI>(uniArg)...);
-                    
+
             const auto end = std::chrono::steady_clock::now();
-            std::chrono::duration<double> elapsed = end - start;
-            std::cout << backend << " Time in seconds: " << elapsed.count() << '\n';
+            auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+            std::cout << backend << "Chrono Time in seconds: " << elapsed.count() << '\n';
 
         }
         print_index<EI...>::print();
