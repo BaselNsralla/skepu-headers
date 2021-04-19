@@ -3,6 +3,10 @@
 #include <iostream>
 #include <type_traits>
 #include <algorithm>
+#include <chrono>
+#include <skepu3/backend/benchmark.h>
+
+using namespace skepu;
 
 namespace autotuner
 {
@@ -34,14 +38,14 @@ namespace autotuner
     }
 
     template<typename T>
-    void sample_impl(skepu::Matrix<T>& vec) {
+    void sample_impl(skepu::Matrix<T>& mat) {
         std::cout << "Matrix Sample" << std::endl;
     }
 
     template<typename T>
     void sample_impl(skepu::Vector<T>& vec) {
         std::cout << "Vector Sample" << std::endl;
-        vec.init(300, T{}); // Eller utan T{}
+        vec.init(300000, T{}); // Eller utan T{}
     }
     
     template<size_t Index>
@@ -128,6 +132,21 @@ namespace autotuner
         //sample_all(elwiseArg, ei);
         //sample_all(containerArg, ci);
         //sample_all(uniArg, ui);
+    	for (auto backend : skepu::Backend::availableTypes())
+		{
+            skepu::BackendSpec spec(backend);
+			skeleton.setBackend(spec);
+            const auto start = std::chrono::steady_clock::now();
+            skeleton(std::get<OI>(resultArg)...,
+                    std::get<EI>(elwiseArg)...,
+                    std::get<CI>(containerArg)...,
+                    std::get<UI>(uniArg)...);
+                    
+            const auto end = std::chrono::steady_clock::now();
+            std::chrono::duration<double> elapsed = end - start;
+            std::cout << backend << " Time in seconds: " << elapsed.count() << '\n';
+
+        }
         print_index<EI...>::print();
         std::cout << "============" << std::endl;
     }
