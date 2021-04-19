@@ -145,11 +145,19 @@ namespace skepu
 		using Callback = std::function<void(TimeSpan duration)>;
 		
 		inline void nullCallbackFn(TimeSpan duration) {}
-		
+
+
+
+		using MedianBackendCallback = std::function<void(Backend::Type backend, TimeSpan duration)>;		
+		inline void nullMBCallbackFn(Backend::Type backend, TimeSpan duration) {}
+
 		template<typename BF>
-		inline std::vector<TimeSpan> measureForEachBackend(size_t repeats, size_t size, std::vector<BackendSpec> backends, BF f, Callback callback = nullCallbackFn)
+		inline std::map<Backend::Type, TimeSpan> measureForEachBackend(
+										size_t repeats, size_t size, std::vector<BackendSpec> const& backends, BF f, 
+										Callback durationCallback = nullCallbackFn, 
+										MedianBackendCallback medianCallback = nullMBCallbackFn)
 		{
-			std::vector<TimeSpan> medianTimes;
+			std::map<Backend::Type, TimeSpan> medianTimes;
 			for (auto &spec : backends)
 			{
 				std::vector<TimeSpan> durations(repeats);
@@ -158,11 +166,12 @@ namespace skepu
 				for (auto &duration : durations)
 				{
 					duration = measureExecTime(f, size, spec);
-					callback(duration);
+					durationCallback(duration);
 				}
 				
 				// Find median execution time
-				medianTimes.push_back(median(durations));
+				medianCallback(spec.getType(), median(durations));
+				medianTimes.insert({spec.getType(), median(durations)});
 			}
 			return medianTimes;
 		}
