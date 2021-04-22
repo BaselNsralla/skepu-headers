@@ -6,6 +6,7 @@
 #include <chrono>
 #include <skepu3/backend/benchmark.h>
 #include "execution_plan.h"
+#include <cmath>        // std::pow
 using namespace skepu;
 
 namespace autotuner
@@ -84,7 +85,7 @@ namespace autotuner
         static void print(Tuple& tup) {}
     };
     
-
+    // ======================== Apply Util Functions on All the Tuples ===========================
     template<typename Tuple, size_t... Idx>
     void sample_all(Tuple& tup, size_t size, pack_indices<Idx...> ) {
         //size_t l = { (sample_impl(std::get<Idx>(tup)), 0)..., 0 };
@@ -103,6 +104,8 @@ namespace autotuner
         foreach< std::template tuple_size<Tuple>::value >::print(tup);
     }
 
+
+    // ======================= Autotuning ========================================================
     template<bool PrefersMatrix, typename T> 
     using PreferedContainer = typename std::conditional<PrefersMatrix, skepu::Matrix<T>, skepu::Vector<T>>::type;
 
@@ -120,74 +123,78 @@ namespace autotuner
         static constexpr bool pm = Skeleton::prefers_matrix;
 
         PreferedContainer<pm, int> hi{};
-        
-        ArgContainerTup<pm, typename Skeleton::ResultArg> resultArg;
-        ArgContainerTup<pm, typename Skeleton::ElwiseArgs> elwiseArg;
-        ArgContainerTup<pm, typename Skeleton::ContainerArgs> containerArg;
-        ArgContainerTup<pm, typename Skeleton::UniformArgs> uniArg;
-        
-        int current_size = 40;
-        sample_all(resultArg,    current_size, oi);
-        sample_all(elwiseArg,    current_size, ei);
-        sample_all(containerArg, current_size, ci);
-        sample_all(uniArg,       current_size, ui);
-        //sample_all(resultArg,    current_size, oi);
-        //sample_all(elwiseArg,    current_size, ei);
-        //sample_all(containerArg, current_size, ci);
-        //sample_all(uniArg,       current_size, ui);
-        
+        static constexpr size_t MAXSIZE = std::pow<size_t>(size_t(2), size_t(36));
+        static constexpr size_t MAXPOW  = 27; // 2^28 breaks my GPU :( TODO: borde sättas baserat på GPU capacity
+        auto baseTwoPower = [](size_t exp) -> size_t { return std::pow<size_t>(size_t(2), exp); };
 
-        size_t repeats = 5; 
-        size_t size = 0;
-        auto mintime = benchmark::TimeSpan::max();
-        auto backendTypes = Backend::availableTypes();
-        std::vector<BackendSpec> specs(backendTypes.size());
-        std::transform(backendTypes.begin(), backendTypes.end(), specs.begin(), [](Backend::Type& type) {
-            return BackendSpec(type);
-        });
-
-        std::pair<Backend::Type, benchmark::TimeSpan> bestDuration{Backend::Type::CPU, benchmark::TimeSpan::max()};
-
-    	benchmark::measureForEachBackend(repeats, size, specs, 
-            [&](size_t, BackendSpec spec) {
-                skeleton.setBackend(spec);
-                //std::cout << "INVONKLING " << std::endl;
-                // Smple with given size?
-                skeleton(std::get<OI>(resultArg)...,
-                std::get<EI>(elwiseArg)...,
-                std::get<CI>(containerArg)...,
-                std::get<UI>(uniArg)...);
-            },
-            [](benchmark::TimeSpan duration){
-                //std::cout << "Benchmark duration " << duration.count() << std::endl; 
-            },
-            [&](Backend::Type backend, benchmark::TimeSpan duration) {
-                //(std::cout << "Median " << backend << " Took " << duration.count() << std::endl;
-                if (bestDuration.second > duration) {
-                    bestDuration = {backend, duration};
-                }
+        for (size_t i = 1; i <= MAXPOW; ++i) 
+        {
+            size_t current_size = baseTwoPower(i);
+            std::cout << "Sample Size is " << 2 << " POW " << i << " " << current_size << std::endl;
+            ArgContainerTup<pm, typename Skeleton::ResultArg> resultArg;
+            ArgContainerTup<pm, typename Skeleton::ElwiseArgs> elwiseArg;
+            ArgContainerTup<pm, typename Skeleton::ContainerArgs> containerArg;
+            ArgContainerTup<pm, typename Skeleton::UniformArgs> uniArg;
+            
+            //int current_size = 40;
+            sample_all(resultArg,    current_size, oi);
+            sample_all(elwiseArg,    current_size, ei);
+            sample_all(containerArg, current_size, ci);
+            sample_all(uniArg,       current_size, ui);
+            
+            size_t repeats = 5; 
+            size_t size = 0;
+            auto mintime = benchmark::TimeSpan::max();
+            auto backendTypes = Backend::availableTypes();
+            std::vector<BackendSpec> specs(backendTypes.size());
+            std::transform(backendTypes.begin(), backendTypes.end(), specs.begin(), [](Backend::Type& type) {
+                return BackendSpec(type);
             });
-        
-        std::cout << "BEST BACKEND " << bestDuration.first << std::endl;
-        ExecutionPlan plan{}; 
-        plan.insert(bestDuration.first, current_size);
 
-        for (auto backend : skepu::Backend::availableTypes())
-		{
-            skepu::BackendSpec spec(backend);
-			skeleton.setBackend(spec);
-            const auto start = std::chrono::steady_clock::now();
-            skeleton(std::get<OI>(resultArg)...,
+            std::pair<Backend::Type, benchmark::TimeSpan> bestDuration{Backend::Type::CPU, benchmark::TimeSpan::max()};
+
+            benchmark::measureForEachBackend(repeats, size, specs, 
+                [&](size_t, BackendSpec spec) {
+                    skeleton.setBackend(spec);
+                    //std::cout << "INVONKLING " << std::endl;
+                    // Smple with given size?
+                    skeleton(std::get<OI>(resultArg)...,
                     std::get<EI>(elwiseArg)...,
                     std::get<CI>(containerArg)...,
                     std::get<UI>(uniArg)...);
+                },
+                [](benchmark::TimeSpan duration){
+                    //std::cout << "Benchmark duration " << duration.count() << std::endl; 
+                },
+                [&](Backend::Type backend, benchmark::TimeSpan duration) {
+                    //(std::cout << "Median " << backend << " Took " << duration.count() << std::endl;
+                    if (bestDuration.second > duration) {
+                        bestDuration = {backend, duration};
+                    }
+                });
+            
+            std::cout << "BEST BACKEND " << bestDuration.first << std::endl;
+            ExecutionPlan plan{}; 
+            plan.insert(bestDuration.first, current_size);
 
-            const auto end = std::chrono::steady_clock::now();
-            auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-            std::cout << backend << "Chrono Time in microseconds: " << elapsed.count() << '\n';
+            for (auto backend : skepu::Backend::availableTypes())
+            {
+                skepu::BackendSpec spec(backend);
+                skeleton.setBackend(spec);
+                const auto start = std::chrono::steady_clock::now();
+                skeleton(std::get<OI>(resultArg)...,
+                        std::get<EI>(elwiseArg)...,
+                        std::get<CI>(containerArg)...,
+                        std::get<UI>(uniArg)...);
+
+                const auto end = std::chrono::steady_clock::now();
+                auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+                std::cout << backend << "Chrono Time in microseconds: " << elapsed.count() << '\n';
+            }
+            print_index<EI...>::print();
+            std::cout << "============" << std::endl;
         }
-        print_index<EI...>::print();
-        std::cout << "============" << std::endl;
+
     }
 
     template<typename Skeleton>
