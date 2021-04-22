@@ -191,7 +191,7 @@ namespace skepu
 			this->m_backend = type;
 		}
 		
-		Backend::Type getType()
+		Backend::Type getType() const
 		{
 			return this->m_backend;
 		}
