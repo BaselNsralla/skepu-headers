@@ -7,6 +7,7 @@
 #include <skepu3/backend/benchmark.h>
 #include "execution_plan.h"
 #include <cmath>        // std::pow
+#include <fstream>
 using namespace skepu;
 
 namespace autotuner
@@ -124,8 +125,9 @@ namespace autotuner
 
         PreferedContainer<pm, int> hi{};
         static constexpr size_t MAXSIZE = std::pow<size_t>(size_t(2), size_t(36));
-        static constexpr size_t MAXPOW  = 27; // 2^28 breaks my GPU :( TODO: borde sättas baserat på GPU capacity
+        static constexpr size_t MAXPOW  = 26; // 2^27-2^28 breaks my GPU :( TODO: borde sättas baserat på GPU capacity
         auto baseTwoPower = [](size_t exp) -> size_t { return std::pow<size_t>(size_t(2), exp); };
+        ExecutionPlan plan{}; 
 
         for (size_t i = 1; i <= MAXPOW; ++i) 
         {
@@ -143,7 +145,7 @@ namespace autotuner
             sample_all(uniArg,       current_size, ui);
             
             size_t repeats = 5; 
-            size_t size = 0;
+            size_t size    = 0;
             auto mintime = benchmark::TimeSpan::max();
             auto backendTypes = Backend::availableTypes();
             std::vector<BackendSpec> specs(backendTypes.size());
@@ -174,8 +176,8 @@ namespace autotuner
                 });
             
             std::cout << "BEST BACKEND " << bestDuration.first << std::endl;
-            ExecutionPlan plan{}; 
             plan.insert(bestDuration.first, current_size);
+
 
             for (auto backend : skepu::Backend::availableTypes())
             {
@@ -193,6 +195,12 @@ namespace autotuner
             }
             print_index<EI...>::print();
             std::cout << "============" << std::endl;
+        }
+        std::ofstream file("/home/lized/Skrivbord/test/ok2.json");
+        std::cout << "WRITEING ###########";
+        if(file) {
+            std::cout << "###########OK" << std::endl;
+            file << plan;
         }
 
     }

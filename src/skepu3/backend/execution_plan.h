@@ -5,11 +5,8 @@
 #include <skepu3/impl/backend.hpp>
 #include <algorithm>
 #include <iostream>
-
-using namespace skepu;
-using SizeRange     = std::pair<size_t, size_t>;
-using BackendRange  = std::pair<Backend::Type, SizeRange>;
-using BackendRanges = std::vector<BackendRange>;
+#include <string>
+#include <sstream>
 
 
 // template<typename T>
@@ -31,6 +28,19 @@ using BackendRanges = std::vector<BackendRange>;
         2 -> Vector of ranges
 */
 namespace autotuner {
+    
+    using namespace skepu;
+    using SizeRange     = std::pair<size_t, size_t>;
+    using BackendRange  = std::pair<Backend::Type, SizeRange>;
+    using BackendRanges = std::vector<BackendRange>;
+
+   
+    using std::stringstream;
+    using std::ostream;
+    using std::string;
+    using std::istream;
+    using std::getline;
+
     class ExecutionPlan
     {
         BackendRanges ranges;
@@ -46,8 +56,8 @@ public:
             ranges.push_back({type, {rangeStart, size}}); 
         }
 
-        Backend::Type optimalBackend(SizeRange range)
-        {}
+        // Backend::Type optimalBackend(SizeRange range) 
+        // {} hitta lower och upper bound?
 
         Backend::Type optimalBackend(size_t targetSize)
         {
@@ -69,7 +79,60 @@ public:
                 return (*range_it).first;
             }
         }
-
-
+        
+        friend ExecutionPlan& operator>>(ExecutionPlan& executionPlan, istream& is);
+        friend ostream&       operator<<(ostream& os, ExecutionPlan const& executionPlan);
     };
+
+    //template<typename>
+    
+    ExecutionPlan& operator>>(ExecutionPlan& executionPlan, istream& is) 
+    {
+        string line;
+        getline(is, line);
+
+        auto extract = [](istream& is, char&& delim) -> size_t { // should be templated to be used in all getlines in the while loop
+            string dummy;
+            getline(is, dummy, is.widen(std::move(delim)));
+            size_t res;
+            is >> res;
+            return res;
+        };
+
+        while(getline(is, line))
+        {
+            stringstream ios(line);
+
+            std::string linepart;
+            getline(ios, linepart, ios.widen(':'));
+            
+            if (ios.fail()) { break; }
+            
+            Backend::Type backendType = Backend::typeFromString(linepart);
+            
+            int rangeStart = extract(ios, '[');
+            int rangeEnd   = extract(ios, ',');
+            
+            getline(ios, linepart);
+            std::cout << rangeStart << "<---> "<< rangeEnd << std::endl;
+        }
+
+        return executionPlan;
+    }
+
+
+    ostream& operator<<(ostream& os, ExecutionPlan const& executionPlan) 
+    {
+
+        os << "{" << '\n';
+        for (BackendRange const& br: executionPlan.ranges)
+        {
+            auto rangeStart = br.second.first;
+            auto rangeEnd   = br.second.second; 
+            os << '"' << br.first << '"' << ": " << "[" << rangeStart << ", " << rangeEnd << "], \n";
+        }
+        os << "}\n";
+        return os;
+    } 
+
 }
