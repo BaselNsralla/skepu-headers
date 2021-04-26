@@ -84,32 +84,23 @@ public:
         friend ostream&       operator<<(ostream& os, ExecutionPlan const& executionPlan);
     };
 
-    //template<typename>
     
-    std::string getJsonKeyLine(istream& is) 
-    {
-        char quote;
-        is >> quote;
-        std::string key;
-        getline(is, key, is.widen('"'));
-        return key;
-    }
-
     template<typename T>
-    T extract(istream& is, char start, char end) 
+    T extract(istream& is, char start, char end) // specialize T is string?
     {
-        auto clear = [&] (char& delim) -> void {
+        auto step = [&] (char&& delim) -> void {
             string dummy;
             getline(is, dummy, is.widen(std::move(delim)));
         };
 
-        if(start != '\0') { clear(start); }
+        if(start != '\0') { step(std::move(start)); }
 
         T res;
-        is >> res;
-        
-        if(end != '\0') { clear(end); }
 
+        std::string linepart;
+        getline(is, linepart, is.widen(std::move(end == '\0' ? '\n' : end)));
+        stringstream ios(linepart);
+        ios >> res;
         return res;
     }
 
@@ -121,21 +112,21 @@ public:
         while(getline(is, line))
         {
             stringstream ios(line);
+        
+            auto rangeStart = extract<size_t>(ios, '"',  ':');
+            auto rangeEnd   = extract<size_t>(ios, '\0', '"');
 
-            auto key = getJsonKeyLine(is);
+            if (ios.fail()) { break; }
 
             std::string linepart; 
             getline(ios, linepart, ios.widen(':'));
             
-            if (ios.fail()) { break; }
-            
+            auto key = extract<std::string>(ios, '"', '"');
+
             Backend::Type backendType = Backend::typeFromString(key);
-            
-            size_t rangeStart = extract<size_t>(ios, '[', ',');
-            size_t rangeEnd   = extract<size_t>(ios, '\0', ']'); // specialize extractions based on the 
-            
+                        
             getline(ios, linepart);
-            std::cout << rangeStart << "<---> "<< rangeEnd << std::endl;
+            std::cout << backendType << " IS Better in : " << rangeStart << "<---> "<< rangeEnd << std::endl;
         }
 
         return executionPlan;
@@ -146,12 +137,26 @@ public:
     {
 
         os << "{" << '\n';
-        for (BackendRange const& br: executionPlan.ranges)
-        {
+        //for (BackendRange const& br: executionPlan.ranges)
+        auto output = [&](BackendRange const& br, std::string&& sep) {
             auto rangeStart = br.second.first;
             auto rangeEnd   = br.second.second; 
-            os << '"' << br.first << '"' << ": " << "[" << rangeStart << ", " << rangeEnd << "], \n";
+            os 
+            << '"' << rangeStart << ':' << rangeEnd << '"'
+            << ": " 
+            << '"' << br.first << '"'
+            << std::move(sep); 
+        };
+
+        for (auto it = executionPlan.ranges.begin(); 
+            it != executionPlan.ranges.end() - 1; 
+            std::advance(it, 1))
+        {
+            output(*it, ",\n");
         }
+
+        output(*(executionPlan.ranges.end() - 1), "\n");
+
         os << "}\n";
         return os;
     } 
