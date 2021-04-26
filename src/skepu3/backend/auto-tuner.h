@@ -196,12 +196,14 @@ namespace autotuner
             print_index<EI...>::print();
             std::cout << "============" << std::endl;
         }
-        std::ofstream file("/home/lized/Skrivbord/test/ok2.json");
-        std::cout << "WRITEING ###########";
-        if(file) {
-            std::cout << "###########OK" << std::endl;
-            file << plan;
-        }
+        //std::ofstream file("/home/lized/Skrivbord/test/ok2.json");
+        //std::ifstream sfile("/home/lized/Skrivbord/test/ok2.json");
+        //sfile >> plan;
+        // std::cout << "WRITEING ###########";
+        // if(file) {
+        //     std::cout << "###########OK" << std::endl;
+        //     file << plan;
+        // }
 
     }
 

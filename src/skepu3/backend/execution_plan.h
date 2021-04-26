@@ -86,32 +86,53 @@ public:
 
     //template<typename>
     
-    ExecutionPlan& operator>>(ExecutionPlan& executionPlan, istream& is) 
+    std::string getJsonKeyLine(istream& is) 
     {
-        string line;
-        getline(is, line);
+        char quote;
+        is >> quote;
+        std::string key;
+        getline(is, key, is.widen('"'));
+        return key;
+    }
 
-        auto extract = [](istream& is, char&& delim) -> size_t { // should be templated to be used in all getlines in the while loop
+    template<typename T>
+    T extract(istream& is, char start, char end) 
+    {
+        auto clear = [&] (char& delim) -> void {
             string dummy;
             getline(is, dummy, is.widen(std::move(delim)));
-            size_t res;
-            is >> res;
-            return res;
         };
 
+        if(start != '\0') { clear(start); }
+
+        T res;
+        is >> res;
+        
+        if(end != '\0') { clear(end); }
+
+        return res;
+    }
+
+    ExecutionPlan& operator>>(istream& is, ExecutionPlan& executionPlan) 
+    {
+        std::cout << "Hallow " << std::endl;
+        string line;
+        getline(is, line);
         while(getline(is, line))
         {
             stringstream ios(line);
 
-            std::string linepart;
+            auto key = getJsonKeyLine(is);
+
+            std::string linepart; 
             getline(ios, linepart, ios.widen(':'));
             
             if (ios.fail()) { break; }
             
-            Backend::Type backendType = Backend::typeFromString(linepart);
+            Backend::Type backendType = Backend::typeFromString(key);
             
-            int rangeStart = extract(ios, '[');
-            int rangeEnd   = extract(ios, ',');
+            size_t rangeStart = extract<size_t>(ios, '[', ',');
+            size_t rangeEnd   = extract<size_t>(ios, '\0', ']'); // specialize extractions based on the 
             
             getline(ios, linepart);
             std::cout << rangeStart << "<---> "<< rangeEnd << std::endl;
