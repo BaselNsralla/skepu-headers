@@ -80,7 +80,7 @@ public:
             }
         }
         
-        friend ExecutionPlan& operator>>(ExecutionPlan& executionPlan, istream& is);
+        friend ExecutionPlan& operator>>(istream& is, ExecutionPlan& executionPlan);
         friend ostream&       operator<<(ostream& os, ExecutionPlan const& executionPlan);
     };
 
@@ -106,6 +106,7 @@ public:
 
     ExecutionPlan& operator>>(istream& is, ExecutionPlan& executionPlan) 
     {
+        BackendRanges ranges; 
         std::cout << "Hallow " << std::endl;
         string line;
         getline(is, line);
@@ -123,11 +124,13 @@ public:
             
             auto key = extract<std::string>(ios, '"', '"');
 
-            Backend::Type backendType = Backend::typeFromString(key);
-                        
             getline(ios, linepart);
-            std::cout << backendType << " IS Better in : " << rangeStart << "<---> "<< rangeEnd << std::endl;
+
+            ranges.emplace_back<Backend::Type, SizeRange>(Backend::typeFromString(key), {rangeStart, rangeEnd});
         }
+
+        executionPlan.ranges = std::move(ranges);
+        std::cout << executionPlan << std::endl;
 
         return executionPlan;
     }
@@ -137,7 +140,7 @@ public:
     {
 
         os << "{" << '\n';
-        //for (BackendRange const& br: executionPlan.ranges)
+
         auto output = [&](BackendRange const& br, std::string&& sep) {
             auto rangeStart = br.second.first;
             auto rangeEnd   = br.second.second; 

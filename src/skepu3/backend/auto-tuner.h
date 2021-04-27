@@ -125,7 +125,7 @@ namespace autotuner
 
         PreferedContainer<pm, int> hi{};
         static constexpr size_t MAXSIZE = std::pow<size_t>(size_t(2), size_t(36));
-        static constexpr size_t MAXPOW  = 26; // 2^27-2^28 breaks my GPU :( TODO: borde sättas baserat på GPU capacity
+        static constexpr size_t MAXPOW  = 26; // TODO: 2^27-2^28 breaks my GPU :( TODO: borde sättas baserat på GPU capacity
         auto baseTwoPower = [](size_t exp) -> size_t { return std::pow<size_t>(size_t(2), exp); };
         ExecutionPlan plan{}; 
 
@@ -196,15 +196,16 @@ namespace autotuner
             print_index<EI...>::print();
             std::cout << "============" << std::endl;
         }
-        //std::ifstream sfile("/home/lized/Skrivbord/test/ok2.json");
-        //sfile >> plan;
         
-        // std::ofstream file("/home/lized/Skrivbord/test/ok2.json");
-        // std::cout << "WRITEING ###########";
+        // std::ofstream file("/home/lized/Skrivbord/test/ok1337_2.json");
+        // std::cout << "WRITING ###########";
         // if(file) {
         //     std::cout << "###########OK" << std::endl;
-        //     file << plan;
+        //     file << plan << std::flush;
         // }
+
+        // std::ifstream sfile("/home/lized/Skrivbord/test/ok1337_2.json");
+        // sfile >> plan;
 
     }
 
