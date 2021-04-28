@@ -46,6 +46,11 @@ namespace autotuner {
         BackendRanges ranges;
 
 public:
+        /*
+         TODO: 
+            Insertions Should be able to merge with the previous insert if they
+            share the same optimal backend.  
+        */
         void insert(Backend::Type type, size_t size)//SizeRange range) 
         {
             /* TODO: Make sure these come sorted
@@ -107,7 +112,6 @@ public:
     ExecutionPlan& operator>>(istream& is, ExecutionPlan& executionPlan) 
     {
         BackendRanges ranges; 
-        std::cout << "Hallow " << std::endl;
         string line;
         getline(is, line);
         while(getline(is, line))

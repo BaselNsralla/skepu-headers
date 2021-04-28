@@ -30,6 +30,11 @@ namespace autotuner
     template<typename T>
     void print_impl(skepu::Matrix<T>& vec) {
         std::cout << "Matrix Print" << std::endl;
+        for(auto& val: vec) {
+            for(auto& elem: val) {
+                std::cout << elem << std::endl;
+            }
+        }
     }
 
     template<typename T>
@@ -44,6 +49,7 @@ namespace autotuner
     template<typename T>
     void sample_impl(skepu::Matrix<T>& mat, size_t size) {
         std::cout << "Matrix Sample" << std::endl;
+        mat.init(size, T{});
     }
 
     template<typename T>
