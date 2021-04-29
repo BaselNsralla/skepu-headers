@@ -5,6 +5,9 @@
 #ifndef MAPREDUCE_H
 #define MAPREDUCE_H
 
+#include "./auto-tuner.h"
+using namespace autotuner;
+
 namespace skepu
 {
 	namespace backend
@@ -26,7 +29,7 @@ namespace skepu
 		*  takes whole containers (vectors, matrices).
 		*/
 		template<size_t arity, typename MapFunc, typename ReduceFunc, typename CUDAKernel, typename CUDAReduceKernel, typename CLKernel>
-		class MapReduce : public SkeletonBase
+		class MapReduce : public SkeletonBase, public Tuner<MapReduce<arity, MapFunc, ReduceFunc, CUDAKernel, CUDAReduceKernel, CLKernel>>
 		{
 		public:
 			MapReduce(CUDAKernel mapreduce, CUDAReduceKernel reduce)

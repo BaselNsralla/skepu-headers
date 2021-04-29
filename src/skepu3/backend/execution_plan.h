@@ -113,12 +113,14 @@ public:
     {
         BackendRanges ranges; 
         string line;
+
         getline(is, line);
         while(getline(is, line))
         {
             stringstream ios(line);
-        
+
             auto rangeStart = extract<size_t>(ios, '"',  ':');
+
             auto rangeEnd   = extract<size_t>(ios, '\0', '"');
 
             if (ios.fail()) { break; }
@@ -154,15 +156,18 @@ public:
             << '"' << br.first << '"'
             << std::move(sep); 
         };
-
-        for (auto it = executionPlan.ranges.begin(); 
-            it != executionPlan.ranges.end() - 1; 
-            std::advance(it, 1))
+        
+        if (!executionPlan.ranges.empty())
         {
-            output(*it, ",\n");
-        }
+            for (auto it = executionPlan.ranges.begin(); 
+                it != executionPlan.ranges.end() - 1; 
+                std::advance(it, 1))
+            {
+                output(*it, ",\n");
+            }
 
-        output(*(executionPlan.ranges.end() - 1), "\n");
+                output(*(executionPlan.ranges.end() - 1), "\n");
+        }
 
         os << "}\n";
         return os;

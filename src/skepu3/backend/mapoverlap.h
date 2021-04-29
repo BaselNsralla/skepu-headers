@@ -6,6 +6,8 @@
 #define MAPOVERLAP_H
 
 #include "skepu3/impl/region.hpp"
+#include "./auto-tuner.h"
+using namespace autotuner;
 
 namespace skepu
 {
@@ -27,7 +29,7 @@ namespace skepu
 		 *  MapOverlap2D class can be used by including same header file (i.e., mapoverlap.h) but class name is different (MapOverlap2D).
 		 */
 		template<typename MapOverlapFunc, typename CUDAKernel, typename C2, typename C3, typename C4, typename CLKernel>
-		class MapOverlap1D: public SkeletonBase
+		class MapOverlap1D: public SkeletonBase, public Tuner<MapOverlap1D<MapOverlapFunc, CUDAKernel, C2, C3, C4, CLKernel>>
 		{
 			using Ret = typename MapOverlapFunc::Ret;
 			using T = typename region_type<typename parameter_type<0, decltype(&MapOverlapFunc::CPU)>::type>::type;
@@ -412,24 +414,24 @@ namespace skepu
 		
 		
 		template<typename MapOverlapFunc, typename CUDAKernel, typename CLKernel>
-		class MapOverlap2D: public SkeletonBase
+		class MapOverlap2D: public SkeletonBase, public Tuner<MapOverlap2D<MapOverlapFunc, CUDAKernel, CLKernel>>
 		{
 			using Ret = typename MapOverlapFunc::Ret;
-			using T = typename region_type<typename parameter_type<(MapOverlapFunc::indexed ? 1 : 0), decltype(&MapOverlapFunc::CPU)>::type>::type;
-			using F = ConditionalIndexForwarder<MapOverlapFunc::indexed, decltype(&MapOverlapFunc::CPU)>;
+			using T   = typename region_type<typename parameter_type<(MapOverlapFunc::indexed ? 1 : 0), decltype(&MapOverlapFunc::CPU)>::type>::type;
+			using F   = ConditionalIndexForwarder<MapOverlapFunc::indexed, decltype(&MapOverlapFunc::CPU)>;
 			
 		public:
 			
 			static constexpr auto skeletonType = SkeletonType::MapOverlap2D;
-			using ResultArg = std::tuple<T>;
-			using ElwiseArgs = std::tuple<T>;
+			using ResultArg     = std::tuple<T>;
+			using ElwiseArgs    = std::tuple<T>;
 			using ContainerArgs = typename MapOverlapFunc::ContainerArgs;
-			using UniformArgs = typename MapOverlapFunc::UniformArgs;
+			using UniformArgs   = typename MapOverlapFunc::UniformArgs;
 			static constexpr bool prefers_matrix = false;
 			
-			static constexpr size_t arity = 1;
+			static constexpr size_t arity    = 1;
 			static constexpr size_t outArity = MapOverlapFunc::outArity;
-			static constexpr size_t numArgs = MapOverlapFunc::totalArity - (MapOverlapFunc::indexed ? 1 : 0) + outArity;
+			static constexpr size_t numArgs  = MapOverlapFunc::totalArity - (MapOverlapFunc::indexed ? 1 : 0) + outArity;
 			static constexpr size_t anyArity = std::tuple_size<typename MapOverlapFunc::ContainerArgs>::value;
 			
 			static constexpr typename make_pack_indices<outArity, 0>::type out_indices{};
@@ -604,7 +606,7 @@ namespace skepu
 		
 		
 		template<typename MapOverlapFunc, typename CUDAKernel, typename CLKernel>
-		class MapOverlap3D: public SkeletonBase
+		class MapOverlap3D: public SkeletonBase, public Tuner<MapOverlap3D<MapOverlapFunc, CUDAKernel, CLKernel>>
 		{
 			using Ret = typename MapOverlapFunc::Ret;
 			using T = typename region_type<typename parameter_type<(MapOverlapFunc::indexed ? 1 : 0), decltype(&MapOverlapFunc::CPU)>::type>::type;
@@ -613,10 +615,10 @@ namespace skepu
 		public:
 			
 			static constexpr auto skeletonType = SkeletonType::MapOverlap3D;
-			using ResultArg = std::tuple<T>;
-			using ElwiseArgs = std::tuple<T>;
+			using ResultArg     = std::tuple<T>;
+			using ElwiseArgs    = std::tuple<T>;
 			using ContainerArgs = typename MapOverlapFunc::ContainerArgs;
-			using UniformArgs = typename MapOverlapFunc::UniformArgs;
+			using UniformArgs   = typename MapOverlapFunc::UniformArgs;
 			static constexpr bool prefers_matrix = false;
 			
 			static constexpr size_t arity = 1;
@@ -803,7 +805,7 @@ namespace skepu
 		
 		
 		template<typename MapOverlapFunc, typename CUDAKernel, typename CLKernel>
-		class MapOverlap4D: public SkeletonBase
+		class MapOverlap4D: public SkeletonBase, public Tuner<MapOverlap4D<MapOverlapFunc, CUDAKernel, CLKernel>>
 		{
 			using Ret = typename MapOverlapFunc::Ret;
 			using T = typename region_type<typename parameter_type<(MapOverlapFunc::indexed ? 1 : 0), decltype(&MapOverlapFunc::CPU)>::type>::type;

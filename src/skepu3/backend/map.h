@@ -4,7 +4,8 @@
 
 #ifndef MAP_H
 #define MAP_H
-
+#include "./auto-tuner.h"
+using namespace autotuner;
 namespace skepu
 {
 	namespace backend
@@ -24,7 +25,7 @@ namespace skepu
 		 *  takes whole containers (vectors, matrices). The container variants are merely wrappers for the functions which takes iterators as parameters.
 		 */
 		template<size_t arity, typename MapFunc, typename CUDAKernel, typename CLKernel>
-		class Map : public SkeletonBase
+		class Map : public SkeletonBase, public Tuner<Map<arity, MapFunc, CUDAKernel, CLKernel>>
 		{
 			// ==========================    Type definitions   ==========================
 
@@ -67,6 +68,12 @@ namespace skepu
 			{
 				tuner::tune(*this, std::forward<Args>(args)...);
 			}
+
+			// void autotuning() 
+			// {
+			// 	autotuner::tuneWrapper(*this);
+			// }
+
 
 			// =======================      Call operators      ==========================
 

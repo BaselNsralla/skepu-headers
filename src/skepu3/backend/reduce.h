@@ -6,6 +6,8 @@
 #define REDUCE_H
 
 #include "reduce_helpers.h"
+#include "./auto-tuner.h"
+using namespace autotuner;
 
 namespace skepu
 {
@@ -42,7 +44,7 @@ namespace skepu
 		 * or 2 user function (i.e. 2D reduction). See code examples for more information.
 		 */
 		template<typename ReduceFunc, typename CUDAKernel, typename CLKernel>
-		class Reduce1D : public SkeletonBase
+		class Reduce1D : public SkeletonBase, public Tuner<Reduce1D<ReduceFunc, CUDAKernel, CLKernel>>
 		{
 			
 		public:

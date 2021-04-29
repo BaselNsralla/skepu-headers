@@ -1,5 +1,8 @@
 #pragma once
 
+// Use logic here
+#define autotune
+
 // Deprecated operators are still accessible in this version 
 #define SKEPU_ENABLE_DEPRECATED_OPERATOR
 

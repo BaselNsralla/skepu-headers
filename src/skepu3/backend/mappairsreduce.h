@@ -5,6 +5,9 @@
 #ifndef MAPPAIRSREDUCE_H
 #define MAPPAIRSREDUCE_H
 
+#include "./auto-tuner.h"
+using namespace autotuner;
+
 namespace skepu
 {
 	namespace backend
@@ -18,7 +21,7 @@ namespace skepu
 		*  \brief A class representing the MapPairsReduce skeleton.
 		*/
 		template<size_t Varity, size_t Harity, typename MapPairsFunc, typename ReduceFunc, typename CUDAKernel, typename CUDAReduceKernel, typename CLKernel>
-		class MapPairsReduce : public SkeletonBase
+		class MapPairsReduce : public SkeletonBase, public Tuner<MapPairsReduce<Varity, Harity, MapPairsFunc, ReduceFunc, CUDAKernel, CUDAReduceKernel, CLKernel>>
 		{
 		public:
 			MapPairsReduce(CUDAKernel mappairsreduce, CUDAReduceKernel reduce)

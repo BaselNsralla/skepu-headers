@@ -5,6 +5,9 @@
 #ifndef SCAN_H
 #define SCAN_H
 
+#include "./auto-tuner.h"
+using namespace autotuner;
+
 namespace skepu
 {
 	enum class ScanMode
@@ -35,7 +38,7 @@ namespace skepu
 		 *  or if vectors or iterators are used as parameters.
 		 */
 		template <typename ScanFunc, typename CUDAScan, typename CUDAScanUpdate, typename CUDAScanAdd, typename CLKernel>
-		class Scan : public SkeletonBase
+		class Scan : public SkeletonBase, public Tuner<Scan<ScanFunc, CUDAScan, CUDAScanUpdate, CUDAScanAdd, CLKernel>> 
 		{
 			
 		public:
