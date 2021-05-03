@@ -58,7 +58,8 @@ namespace autotuner
 
     void sample_impl(size_t& a, size_t size) {
         std::cout << "##### Fix sampling of uniform arguments #####" << std::endl;
-        a = 1;
+        a = std::max<size_t>(2, 0.2*size);//size;
+        std::cout << "Set to " << a << std::endl;
     }
     
     template<typename T>
@@ -139,8 +140,9 @@ namespace autotuner
     {
         // Typerna för variablerna och sample metoden bör abstraheras till flera using deklarationer
         size_t size;
+        Skeleton& skeleton;
 
-        MapOverlapSampler(size_t size): size{size} {}
+        MapOverlapSampler(Skeleton& skeleton, size_t size): skeleton{skeleton}, size{size} {}
 
         static constexpr bool pm = true; 
         ArgContainerTup<pm, typename Skeleton::ResultArg>     resultArg;
@@ -150,11 +152,17 @@ namespace autotuner
 
         void sample() 
         {
-           foreach< std::template tuple_size<ArgContainerTup<pm, typename Skeleton::ResultArg> >::value >::sample(resultArg,    size);
-           foreach< std::template tuple_size<ArgContainerTup<pm, typename Skeleton::ElwiseArgs>>::value >::sample(elwiseArg,    size);
-           foreach< std::template tuple_size<std::tuple<size_t>>::value>::sample(uniArg, size);
-           foreach< std::template tuple_size<ArgContainerTup<pm, typename Skeleton::UniformArgs> >::value >::sample(containerArg, size);
-
+            foreach< std::template tuple_size<std::tuple<size_t>>::value>::sample(uniArg, size);
+            size_t kernel = std::get<0>(uniArg);
+            size_t padedSize = size + (kernel*2);
+            skeleton.setOverlap(kernel, kernel); 
+            
+            size_t& k = std::get<0>(uniArg); k=1;
+            //foreach< std::template tuple_size<std::tuple<size_t>>::value>::sample(uniArg, 1);
+            foreach< std::template tuple_size<ArgContainerTup<pm, typename Skeleton::ResultArg> >::value >::sample(resultArg,    size);
+            foreach< std::template tuple_size<ArgContainerTup<pm, typename Skeleton::ElwiseArgs>>::value >::sample(elwiseArg,    padedSize);
+            foreach< std::template tuple_size<ArgContainerTup<pm, typename Skeleton::UniformArgs> >::value >::sample(containerArg, size);
+           
         }
     };
 
@@ -162,7 +170,8 @@ namespace autotuner
     struct ASampler // Specialization not needed for now<Skeleton, false>
     {
         size_t size;
-        ASampler(size_t size): size{size} {}
+        Skeleton& skeleton;
+        ASampler(Skeleton& skeleton, size_t size): skeleton{skeleton}, size{size} {}
 
         static constexpr bool pm = true; 
         ArgContainerTup<pm, typename Skeleton::ResultArg>     resultArg;
@@ -200,7 +209,7 @@ namespace autotuner
 
         //PreferedContainer<pm, int> hi{};
         static constexpr size_t MAXSIZE = std::pow<size_t>(size_t(2), size_t(36));
-        static constexpr size_t MAXPOW  = 13;//26; // TODO: 2^27-2^28 breaks my GPU :( TODO: borde sättas baserat på GPU capacity
+        static constexpr size_t MAXPOW  = 8;//26; // TODO: 2^27-2^28 breaks my GPU :( TODO: borde sättas baserat på GPU capacity
         auto baseTwoPower = [](size_t exp) -> size_t { return std::pow<size_t>(size_t(2), exp); };
         ExecutionPlan plan{}; 
 
@@ -218,7 +227,7 @@ namespace autotuner
             //sample_all(containerArg, current_size, ci);
             //sample_all(uniArg,       current_size, ui);
 
-            ConditionalSampler<Skeleton> sampler{current_size};
+            ConditionalSampler<Skeleton> sampler{skeleton, current_size};
             sampler.sample();
 
             //print_all(elwiseArg, ei); // make sure to print something with a size if you want to se anything
@@ -240,7 +249,7 @@ namespace autotuner
                     skeleton.setBackend(spec);
                     std::cout << "INVONKING " << std::endl;
                     skeleton(
-                        std::get<OI>(sampler.resultArg)...,
+                        std::get<OI>(sampler.resultArg)..., // sprider eftersom OI är en pack
                         std::get<EI>(sampler.elwiseArg)...,
                         std::get<CI>(sampler.containerArg)...,
                         std::get<UI>(sampler.uniArg)...);
