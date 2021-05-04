@@ -17,9 +17,9 @@
 //#include <skepu3/backend/mapoverlap.h> Skapara problem
 using namespace skepu;
 using namespace skepu::backend;
-
 namespace autotuner
 {   
+    using context = std::initializer_list<int>;
  
 
 
@@ -75,57 +75,25 @@ namespace autotuner
     }
 
 
-    // =========== Helper function to iterate and perform some function, I wish I could pass a template function here
-    template<size_t Index>
-    struct foreach 
+    // =========== Helper function to iterate and perform some function, Would not have been need if auto was available in lambda params
+    
+    struct foreach
     {    
-        // template<typename Tuple, typename... Extra>
-        // static void apply(Tuple& tup, Extra&&... extras) {
-        //     sample_impl(std::get<Index>(tup), std::forward<Extra>(extras)...);
-        //     foreach<Index-1>::apply(tup, std::forward<Extra>(extras)...);
-        // }
-        template<typename Tuple>
-        static void sample(Tuple& tup, size_t size) {
-            sample_impl(std::get<Index - 1>(tup), size);
-            foreach<Index-1>::sample(tup, size);
+        template<size_t... COUNT, typename Tuple>
+        static void sample(Tuple& tup, size_t size) 
+        {
+            context{ (sample_impl(std::get<COUNT>(tup), size), 0)... };
         }
 
-        template<typename Tuple>
-        static void print(Tuple& tup) {
-            print_impl(std::get<Index - 1>(tup));
-            foreach<Index-1>::print(tup);
+        template<size_t... COUNT, typename Tuple>
+        static void print(Tuple& tup) 
+        {
+            context{ (print_impl(std::get<COUNT>(tup)), 0)... };
         }
-    };
 
-    template<>
-    struct foreach<0>
-    {
-        // template<typename Tuple, typename... Extra>
-        // static void apply(Tuple& tup, Extra&&... extras) {}
-        template<typename Tuple>
-        static void sample(Tuple& tup, size_t size) {}
-        template<typename Tuple>
-        static void print(Tuple& tup) {}
     };
     
-    // ======================== Apply Util Functions on All the Tuples ===========================
-    template<typename Tuple, size_t... Idx>
-    void sample_all(Tuple& tup, size_t size, pack_indices<Idx...> ) {
-        //size_t l = { (sample_impl(std::get<Idx>(tup)), 0)..., 0 };
-        std::initializer_list<size_t> indicies = {Idx...};
-        //auto m = std::max(indicies, [](size_t const& a, size_t const& b) { return a < b; });
-        // std::cout << std::tuple_size<Tuple>::value - 1 << std::endl;
-        foreach< std::template tuple_size<Tuple>::value >::sample(tup, size);
-    }
-
-    template<typename Tuple, size_t... Idx>
-    void print_all(Tuple& tup, pack_indices<Idx...> ) {
-        //size_t l = { (sample_impl(std::get<Idx>(tup)), 0)..., 0 };
-        std::initializer_list<size_t> indicies = {Idx...};
-        //auto m = std::max(indicies, [](size_t const& a, size_t const& b) { return a < b; });
-        // std::cout << std::tuple_size<Tuple>::value - 1 << std::endl;
-        foreach< std::template tuple_size<Tuple>::value >::print(tup);
-    }
+    // ========= SAMPLER CLASS  ==============
 
     template<bool PrefersMatrix, typename TupleType>
     using ArgContainerTup = typename std::conditional<PrefersMatrix, 
@@ -135,58 +103,113 @@ namespace autotuner
     template<bool PrefersMatrix, typename T> 
     using PreferedContainer = typename std::conditional<PrefersMatrix, skepu::Matrix<T>, skepu::Vector<T>>::type;
     
+
     template<typename Skeleton>
-    struct MapOverlapSampler 
+    struct Sampler 
+    {
+        static constexpr bool pm = true;
+        using ElwiseWrapped    = ArgContainerTup<pm, typename Skeleton::ElwiseArgs>;
+        using ResultWrapped    = ArgContainerTup<pm, typename Skeleton::ResultArg>;
+        using ContainerWrapped = ArgContainerTup<pm, typename Skeleton::ContainerArgs>;
+        using UniformWrapped   = ArgContainerTup<pm, typename Skeleton::UniformArgs>;
+
+    };
+
+
+    template<typename Skeleton>
+    struct MapOverlapSampler: public Sampler<Skeleton>
     {
         // Typerna för variablerna och sample metoden bör abstraheras till flera using deklarationer
-        size_t size;
         Skeleton& skeleton;
+        size_t size;
 
         MapOverlapSampler(Skeleton& skeleton, size_t size): skeleton{skeleton}, size{size} {}
 
-        static constexpr bool pm = true; 
-        ArgContainerTup<pm, typename Skeleton::ResultArg>     resultArg;
-        ArgContainerTup<pm, typename Skeleton::ElwiseArgs>    elwiseArg;
-        ArgContainerTup<pm, typename Skeleton::UniformArgs>   containerArg;
-        std::tuple<size_t>                                    uniArg;
+        using Parent = Sampler<Skeleton>;
 
-        void sample() 
+        using typename Parent::ResultWrapped;
+        using typename Parent::ElwiseWrapped;
+        using typename Parent::ContainerWrapped;
+        using typename Parent::UniformWrapped; 
+
+        ResultWrapped      resultArg;
+        ElwiseWrapped      elwiseArg;
+        ContainerWrapped   containerArg;
+        std::tuple<size_t> uniArg;
+
+        template<size_t... OI, size_t... EI, size_t... CI, size_t... UI>
+        void sample(pack_indices<OI...>, 
+                    pack_indices<EI...>, 
+                    pack_indices<CI...>, 
+                    pack_indices<UI...>) 
         {
-            foreach< std::template tuple_size<std::tuple<size_t>>::value>::sample(uniArg, size);
+
+            foreach::sample<0>(uniArg, size);
             size_t kernel = std::get<0>(uniArg);
             size_t padedSize = size + (kernel*2);
             skeleton.setOverlap(kernel, kernel); 
             
             size_t& k = std::get<0>(uniArg); k=1;
-            //foreach< std::template tuple_size<std::tuple<size_t>>::value>::sample(uniArg, 1);
-            foreach< std::template tuple_size<ArgContainerTup<pm, typename Skeleton::ResultArg> >::value >::sample(resultArg,    size);
-            foreach< std::template tuple_size<ArgContainerTup<pm, typename Skeleton::ElwiseArgs>>::value >::sample(elwiseArg,    padedSize);
-            foreach< std::template tuple_size<ArgContainerTup<pm, typename Skeleton::UniformArgs> >::value >::sample(containerArg, size);
            
+            foreach::sample<OI...>(resultArg,    size);
+            foreach::sample<EI...>(elwiseArg,    padedSize);
+            foreach::sample<CI...>(containerArg, size);
+
+                        
+            // this->resultArg    = std::move(resultArg);
+            // this->elwiseArg    = std::move(elwiseArg);
+            // this->containerArg = std::move(containerArg);
         }
     };
 
+
+    /*
+    If the this will be created once in the tuner function then the 
+    template function sample, can be replaced by a normal function
+    and the template parameters can be included in the strcut template
+    with nameless arguments in the constructor  
+
+    The reason for the  sample being a template here is becasue the indicies will
+    be very hard to handle outside the construtor, (i.e declaring the type only)
+    because i don't really know if it can see different contigous spreads as different
+    template parameters,
+
+    Example:
+    X<EI.., CI...> will this cause ambiguity?
+    */
     template<typename Skeleton>
-    struct ASampler // Specialization not needed for now<Skeleton, false>
+    struct ASampler: public Sampler<Skeleton> 
     {
-        size_t size;
+
         Skeleton& skeleton;
+        size_t size;
         ASampler(Skeleton& skeleton, size_t size): skeleton{skeleton}, size{size} {}
 
-        static constexpr bool pm = true; 
-        ArgContainerTup<pm, typename Skeleton::ResultArg>     resultArg;
-        ArgContainerTup<pm, typename Skeleton::ElwiseArgs>    elwiseArg;
-        ArgContainerTup<pm, typename Skeleton::ContainerArgs> containerArg;
-        //typename Skeleton::UniformArgs coArgs;
-        ArgContainerTup<pm, typename Skeleton::UniformArgs>   uniArg;
+        using Parent = Sampler<Skeleton>;
 
-        void sample() 
+        using typename Parent::ResultWrapped;
+        using typename Parent::ElwiseWrapped;
+        using typename Parent::ContainerWrapped;
+        using typename Parent::UniformWrapped; 
+
+
+        ResultWrapped    resultArg;
+        ElwiseWrapped    elwiseArg;
+        ContainerWrapped containerArg;
+        UniformWrapped   uniArg;
+
+        template<size_t... OI, size_t... EI, size_t... CI, size_t... UI>  
+        void sample(
+                pack_indices<OI...>, 
+                pack_indices<EI...>, 
+                pack_indices<CI...>, 
+                pack_indices<UI...>) 
         {
-           foreach< std::template tuple_size<ArgContainerTup<pm, typename Skeleton::ResultArg> >::value >::sample(resultArg,    size);
-           foreach< std::template tuple_size<ArgContainerTup<pm, typename Skeleton::ElwiseArgs>>::value >::sample(elwiseArg,    size);
-           foreach< std::template tuple_size<ArgContainerTup<pm, typename Skeleton::ContainerArgs>>::value >::sample(containerArg, size);
-           foreach< std::template tuple_size<ArgContainerTup<pm, typename Skeleton::UniformArgs> >::value >::sample(uniArg,       size);
-           //foreach< std::template tuple_size<typename Skeleton::ContainerArgs>::value >::sample(coArgs,       size);
+
+            foreach::sample<OI...>(resultArg,    size);
+            foreach::sample<EI...>(elwiseArg,    size);
+            foreach::sample<CI...>(containerArg, size);
+            foreach::sample<UI...>(uniArg,       size);
         }
 
     };
@@ -196,7 +219,7 @@ namespace autotuner
     template<typename Skeleton>
     using isMapOverlap = typename std::integral_constant<bool, Skeleton::skeletonType == SkeletonType::MapOverlap2D>;
 
-    template<typename Skeleton>
+    template<typename Skeleton> // binary specialization, would need an extension to nonbinary
     using ConditionalSampler = typename std::conditional<isMapOverlap<Skeleton>::value, MapOverlapSampler<Skeleton>, ASampler<Skeleton>>::type;
 
     template<typename Skeleton, size_t... OI, size_t... EI, size_t... CI, size_t... UI>
@@ -213,6 +236,10 @@ namespace autotuner
         auto baseTwoPower = [](size_t exp) -> size_t { return std::pow<size_t>(size_t(2), exp); };
         ExecutionPlan plan{}; 
 
+        using ElwiseWrapped = ArgContainerTup<true, typename Skeleton::ElwiseArgs>;  
+        ElwiseWrapped elwiseArg;
+
+
         for (size_t i = 4; i <= MAXPOW; ++i) 
         {
             size_t current_size = baseTwoPower(i);
@@ -222,13 +249,17 @@ namespace autotuner
             // ArgContainerTup<pm, typename Skeleton::ContainerArgs> containerArg;
             // ArgContainerTup<pm, typename Skeleton::UniformArgs> uniArg;
             
+            // ====== NEW! =====
+            //context{ (sample_impl(std::get<EI>(elwiseArg), current_size), 0)... };
+            //foreach::sample<EI...>(elwiseArg, current_size);
+
             //sample_all(resultArg,    current_size, oi);
             //sample_all(elwiseArg,    current_size, ei);
             //sample_all(containerArg, current_size, ci);
             //sample_all(uniArg,       current_size, ui);
 
             ConditionalSampler<Skeleton> sampler{skeleton, current_size};
-            sampler.sample();
+            sampler.sample(oi, ei, ci, ui);
 
             //print_all(elwiseArg, ei); // make sure to print something with a size if you want to se anything
             print_index<UI...>::print();
