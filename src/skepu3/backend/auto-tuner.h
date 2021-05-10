@@ -15,8 +15,25 @@
 #include <skepu3/impl/common.hpp>
 //#include <skepu3/backend/map.h>
 //#include <skepu3/backend/mapoverlap.h> Skapara problem
+
+/*
+    TODO: 
+        Se till att prefered container är rätt
+        Se till att alla skeletons funkar med autotuning
+        Se till att kunna använda autotune som backend
+        Kolla hur vi kan göra för ta bort och lägga till execution plan
+        Kolla hur vi kan göra för att justera max storlek på test
+        Kolla varför scan inte kör autotuning
+        Printa COMPILEID
+            Få in COMPILEID i JSON filen
+
+        Flush to disk with id, send uuid from bash
+*/
+
+
 using namespace skepu;
 using namespace skepu::backend;
+
 namespace autotuner
 {   
     using context = std::initializer_list<int>;
@@ -103,17 +120,76 @@ namespace autotuner
     template<bool PrefersMatrix, typename T> 
     using PreferedContainer = typename std::conditional<PrefersMatrix, skepu::Matrix<T>, skepu::Vector<T>>::type;
     
+    template<typename Skeleton, typename Element>
+    struct Containerize 
+    {
+        static constexpr bool pm = Skeleton::skeletonType == SkeletonType::MapOverlap2D || Skeleton::prefers_matrix;
+        using type = PreferedContainer<pm, Element>;
+    };
+
+    // template<typename Skeleton>
+    // struct Containerize<Skeleton, skepu::Index1D>
+    // {
+    //     using type = skepu::Vector<typename Skeleton::ResultArg>; // Not sure about result arg here since it's a tuple
+    // };
+
+    // template<typename Skeleton>
+    // struct Containerize<Skeleton, skepu::Index2D>
+    // {
+    //     using type = skepu::Matrix<typename Skeleton::ResultArg>; // Specializations går inte eftersom T är tuplar
+    // };
+
+    template<typename Skeleton, typename T>
+    struct Containerize<Skeleton, skepu::Mat<T>> 
+    {
+        using type = skepu::Matrix<T>;
+    };
+
+    template<typename Skeleton, typename T>
+    struct Containerize<Skeleton, skepu::Vec<T>> 
+    {
+        using type = skepu::Vector<T>;
+    };
+
+    template<typename Skeleton, typename T>
+    struct Containerize<Skeleton, skepu::MatCol<T>> 
+    {
+        using type = skepu::Matrix<T>;
+    };
+    
+    template<typename Skeleton, typename T>
+    struct Containerize<Skeleton, skepu::MatRow<T>> 
+    {
+        using type = skepu::Matrix<T>;
+    };
+
+    template<typename Skeleton, typename T>
+    struct containerized_layer
+    {};
+
+    template<typename Skeleton, typename... Types>
+    struct containerized_layer<Skeleton, std::tuple<Types...>>
+    {
+        using type = std::tuple<typename Containerize<Skeleton,typename std::decay<Types>::type>::type...>;
+    };
+
+    
+
 
     template<typename Skeleton>
     struct Sampler 
     {
-        static constexpr bool pm = true;
-        using ElwiseWrapped    = ArgContainerTup<pm, typename Skeleton::ElwiseArgs>;
-        using ResultWrapped    = ArgContainerTup<pm, typename Skeleton::ResultArg>;
-        using ContainerWrapped = ArgContainerTup<pm, typename Skeleton::ContainerArgs>;
-        using UniformWrapped   = ArgContainerTup<pm, typename Skeleton::UniformArgs>;
+        // static constexpr bool pm = Skeleton::skeletonType == SkeletonType::MapOverlap2D || 
+        //                            Skeleton::skeletonType == SkeletonType::Scan         ||
+        //                            Skeleton::prefers_matrix;
 
+        using ElwiseWrapped    = typename containerized_layer<Skeleton, typename Skeleton::ElwiseArgs>::type;//ArgContainerTup<pm, typename Skeleton::ElwiseArgs>;
+        using ResultWrapped    = typename containerized_layer<Skeleton, typename Skeleton::ResultArg>::type;//ArgContainerTup<pm, typename Skeleton::ResultArg>;
+        using ContainerWrapped = typename containerized_layer<Skeleton, typename Skeleton::ContainerArgs>::type;//ArgContainerTup<pm, typename Skeleton::ContainerArgs>;
+        using UniformWrapped   = typename containerized_layer<Skeleton, typename Skeleton::UniformArgs>::type;//ArgContainerTup<pm, typename Skeleton::UniformArgs>;
     };
+
+
 
 
     template<typename Skeleton>
@@ -205,7 +281,6 @@ namespace autotuner
                 pack_indices<CI...>, 
                 pack_indices<UI...>) 
         {
-
             foreach::sample<OI...>(resultArg,    size);
             foreach::sample<EI...>(elwiseArg,    size);
             foreach::sample<CI...>(containerArg, size);
@@ -244,19 +319,10 @@ namespace autotuner
         {
             size_t current_size = baseTwoPower(i);
             std::cout << "Sample Size is " << 2 << " POW " << i << " " << current_size << std::endl;
-            // ArgContainerTup<pm, typename Skeleton::ResultArg> resultArg;
-            // ArgContainerTup<pm, typename Skeleton::ElwiseArgs> elwiseArg;
-            // ArgContainerTup<pm, typename Skeleton::ContainerArgs> containerArg;
-            // ArgContainerTup<pm, typename Skeleton::UniformArgs> uniArg;
             
             // ====== NEW! =====
             //context{ (sample_impl(std::get<EI>(elwiseArg), current_size), 0)... };
             //foreach::sample<EI...>(elwiseArg, current_size);
-
-            //sample_all(resultArg,    current_size, oi);
-            //sample_all(elwiseArg,    current_size, ei);
-            //sample_all(containerArg, current_size, ci);
-            //sample_all(uniArg,       current_size, ui);
 
             ConditionalSampler<Skeleton> sampler{skeleton, current_size};
             sampler.sample(oi, ei, ci, ui);
@@ -317,7 +383,7 @@ namespace autotuner
             // std::cout << "============" << std::endl;
         }
         
-        std::cout << "WRITING ###########" << std::endl;
+        std::cout << "WRITING ########### "<< COMPILATIONID << std::endl;
         std::ofstream file("/home/lized/Skrivbord/test/ok1337_2.json");
         if(file) {
             file << plan << std::flush;
