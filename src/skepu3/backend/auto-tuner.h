@@ -34,6 +34,8 @@
         Flush to disk with id, send uuid from bash
 
         Fixa så att ID:et sitter ordentligt och att EXecution plan skapas för varje skeleton
+        - Filnamnet ska vara id:ochType eller ett id som genereas i klassen Map som sätts på 
+          filen 
 */
 
 
@@ -87,13 +89,13 @@ namespace autotuner
     
     template<typename T>
     void sample_impl(skepu::Matrix<T>& mat, size_t size) {
-        std::cout << "Matrix Sample " << size << std::endl;
+        //std::cout << "Matrix Sample " << size << std::endl;
         mat.init(size, size, T{});
     }
 
     template<typename T>
     void sample_impl(skepu::Vector<T>& vec, size_t size) {
-        std::cout << "Vector Sample" << std::endl;
+        //std::cout << "Vector Sample" << std::endl;
         vec.init(size, T{}); // Eller utan T{}
     }
 
@@ -154,6 +156,7 @@ namespace autotuner
     template<typename Skeleton, typename T>
     struct Containerize<Skeleton, skepu::Vec<T>> 
     {
+        
         using type = skepu::Vector<T>;
     };
 
@@ -180,19 +183,64 @@ namespace autotuner
     };
 
     
+    template<size_t...>
+    struct Max {
+        static const size_t value = 0;
+    };
 
+    template<size_t size, size_t...  sizes>
+    struct Max<size, sizes...> {
+        using next = Max<sizes...>; 
+        static const size_t value = size >= next::value ? size : next::value;  
+    };
+
+
+    template<typename T>
+    struct Dimension {
+        static const size_t value = 0;
+    };
+
+    template<typename T>
+    struct Dimension<skepu::Matrix<T>> {
+        static const size_t value = 2;
+    };
+
+    template<typename T>
+    struct Dimension<skepu::Vector<T>> {
+        static const size_t value = 1;
+    };
+
+    //...
+
+    template<typename Container>
+    struct container_dimension {}; //TODO: Just Crash it here
+
+    template<typename... Types>
+    struct container_dimension<std::tuple<Types...>>
+    {   
+        static const size_t value = Max<Dimension<typename std::decay<Types>::type>::value...>::value;
+    };
 
     template<typename Skeleton>
     struct Sampler 
     {
-        // static constexpr bool pm = Skeleton::skeletonType == SkeletonType::MapOverlap2D || 
-        //                            Skeleton::skeletonType == SkeletonType::Scan         ||
-        //                            Skeleton::prefers_matrix;
 
         using ElwiseWrapped    = typename containerized_layer<Skeleton, typename Skeleton::ElwiseArgs>::type;//ArgContainerTup<pm, typename Skeleton::ElwiseArgs>;
         using ResultWrapped    = typename containerized_layer<Skeleton, typename Skeleton::ResultArg>::type;//ArgContainerTup<pm, typename Skeleton::ResultArg>;
         using ContainerWrapped = typename containerized_layer<Skeleton, typename Skeleton::ContainerArgs>::type;//ArgContainerTup<pm, typename Skeleton::ContainerArgs>;
         using UniformWrapped   = typename containerized_layer<Skeleton, typename Skeleton::UniformArgs>::type;//ArgContainerTup<pm, typename Skeleton::UniformArgs>;
+
+        static const size_t gpu_capacity = 24; // or compute this
+        
+        /*
+        Vi behöver göra alla containers eftersom det varierar mellan alla skeletons och vissa har 0 i sig.
+        */
+        static const size_t max_sample   = 
+            gpu_capacity / Max<container_dimension<ContainerWrapped>::value,
+                               container_dimension<ElwiseWrapped>::value,
+                               container_dimension<ResultWrapped>::value,
+                               container_dimension<UniformWrapped>::value
+                               >::value;
     };
 
 
@@ -328,8 +376,10 @@ namespace autotuner
         //Skeleton::prefers_matrix;
 
         //PreferedContainer<pm, int> hi{};
+        std::cout << "##### " << ConditionalSampler<Skeleton>::max_sample << std::endl;
+        std::cout << Skeleton::prefers_matrix << " S " << std::endl;
         static constexpr size_t MAXSIZE = std::pow<size_t>(size_t(2), size_t(36));
-        static constexpr size_t MAXPOW  = 8;//26; // TODO: 2^27-2^28 breaks my GPU :( TODO: borde sättas baserat på GPU capacity
+        static constexpr size_t MAXPOW  = 10;//26; // TODO: 2^27-2^28 breaks my GPU :( TODO: borde sättas baserat på GPU capacity eller skeleton
         auto baseTwoPower = [](size_t exp) -> size_t { return std::pow<size_t>(size_t(2), exp); };
 
         using ElwiseWrapped = ArgContainerTup<true, typename Skeleton::ElwiseArgs>;  
@@ -339,7 +389,7 @@ namespace autotuner
         for (size_t i = 4; i <= MAXPOW; ++i) 
         {
             size_t current_size = baseTwoPower(i);
-            std::cout << "Sample Size is " << 2 << " POW " << i << " " << current_size << std::endl;
+            //std::cout << "Sample Size is " << 2 << " POW " << i << " " << current_size << std::endl;
             
             // ====== NEW! =====
             //context{ (sample_impl(std::get<EI>(elwiseArg), current_size), 0)... };
@@ -353,7 +403,7 @@ namespace autotuner
 
             size_t repeats = 5; 
             size_t size    = 0; // does not matter
-            auto mintime = benchmark::TimeSpan::max();
+           
             auto backendTypes = Backend::availableTypes();
             std::vector<BackendSpec> specs(backendTypes.size());
             std::transform(backendTypes.begin(), backendTypes.end(), specs.begin(), [](Backend::Type& type) {
@@ -365,7 +415,6 @@ namespace autotuner
             benchmark::measureForEachBackend(repeats, size, specs, 
                 [&](size_t, BackendSpec spec) {
                     skeleton.setBackend(spec);
-                    std::cout << "INVONKING " << std::endl;
                     skeleton(
                         std::get<OI>(sampler.resultArg)..., // sprider eftersom OI är en pack
                         std::get<EI>(sampler.elwiseArg)...,
@@ -382,7 +431,7 @@ namespace autotuner
                     }
                 });
             
-            std::cout << "BEST BACKEND " << bestDuration.first << std::endl;
+            std::cout << "BEST BACKEND IS " << bestDuration.first << " FOR SIZE " << current_size << std::endl;
             plan.insert(bestDuration.first, current_size);
         }
         
@@ -392,9 +441,6 @@ namespace autotuner
             file << plan << std::flush;
             std::cout << "###########OK" << std::endl;
         }
-
-        
-
     }
 
     template<typename Skeleton>
