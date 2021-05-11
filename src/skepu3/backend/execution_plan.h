@@ -44,8 +44,14 @@ namespace autotuner {
     class ExecutionPlan
     {
         BackendRanges ranges;
-
 public:
+        string id;
+
+        void clear() {
+            ranges.clear();
+            id.clear();
+        }
+
         /*
          TODO: 
             Insertions Should be able to merge with the previous insert if they
@@ -90,20 +96,25 @@ public:
     };
 
     
+    /*
+        Extracts the string in between `start` and `end`
+    */
     template<typename T>
     T extract(istream& is, char start, char end) // specialize T is string?
     {
-        auto step = [&] (char&& delim) -> void {
+        auto extractUntill = [&] (char&& delim) -> string {
             string dummy;
             getline(is, dummy, is.widen(std::move(delim)));
+            return dummy;
         };
 
-        if(start != '\0') { step(std::move(start)); }
+        // Bypass what is before start if there is a start marker
+        if(start != '\0') { extractUntill(std::move(start)); }
 
         T res;
 
-        std::string linepart;
-        getline(is, linepart, is.widen(std::move(end == '\0' ? '\n' : end)));
+        string linepart = extractUntill(end == '\0' ? '\n' : end);
+
         stringstream ios(linepart);
         ios >> res;
         return res;
@@ -114,17 +125,22 @@ public:
         BackendRanges ranges; 
         string line;
 
-        getline(is, line);
+        getline(is, line); // {
+        
+        extract<string>(is, '"',':'); // id key
+        auto id = extract<string>(is, '"', '"'); // "16ced-213-cdf8123"
+        extract<string>(is, '\0', '\0'); // extract to the end
+
         while(getline(is, line))
         {
             stringstream ios(line);
 
-            auto rangeStart = extract<size_t>(ios, '"',  ':');
-
+            auto rangeStart = extract<size_t>(ios, '"',  ':'); // "123:33" => 123
+            
             auto rangeEnd   = extract<size_t>(ios, '\0', '"');
-
+            
             if (ios.fail()) { break; }
-
+            
             std::string linepart; 
             getline(ios, linepart, ios.widen(':'));
             
@@ -135,6 +151,7 @@ public:
             ranges.emplace_back<Backend::Type, SizeRange>(Backend::typeFromString(key), {rangeStart, rangeEnd});
         }
 
+        executionPlan.id     = std::move(id);
         executionPlan.ranges = std::move(ranges);
         std::cout << executionPlan << std::endl;
 
@@ -151,7 +168,7 @@ public:
             auto rangeStart = br.second.first;
             auto rangeEnd   = br.second.second; 
             os 
-            << '"' << rangeStart << ':' << rangeEnd << '"'
+            << '"' << rangeStart << ':' << rangeEnd << '"' // "123:500"
             << ": " 
             << '"' << br.first << '"'
             << std::move(sep); 
@@ -159,6 +176,7 @@ public:
         
         if (!executionPlan.ranges.empty())
         {
+            os << '"' << "id" << '"' << ':' << '"' << executionPlan.id << '"' << ',' << '\n';
             for (auto it = executionPlan.ranges.begin(); 
                 it != executionPlan.ranges.end() - 1; 
                 std::advance(it, 1))
@@ -166,7 +184,7 @@ public:
                 output(*it, ",\n");
             }
 
-                output(*(executionPlan.ranges.end() - 1), "\n");
+            output(*(executionPlan.ranges.end() - 1), "\n");
         }
 
         os << "}\n";

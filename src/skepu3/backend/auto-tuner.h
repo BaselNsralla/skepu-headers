@@ -13,6 +13,10 @@
 #include <cmath>        // std::pow
 #include <fstream>
 #include <skepu3/impl/common.hpp>
+
+#define STRINGIFY_(x) #x
+#define STRINGIFY(x) STRINGIFY_(x)
+
 //#include <skepu3/backend/map.h>
 //#include <skepu3/backend/mapoverlap.h> Skapara problem
 
@@ -28,6 +32,8 @@
             Få in COMPILEID i JSON filen
 
         Flush to disk with id, send uuid from bash
+
+        Fixa så att ID:et sitter ordentligt och att EXecution plan skapas för varje skeleton
 */
 
 
@@ -302,14 +308,29 @@ namespace autotuner
     {
         // ta ut varje parameter frå call args och använd dem i implementationen gör en benchmark och
         // spara undan, kanske låta resten av programmet köra medan vi håller på här?        
-        std::cout << "============" << std::endl;
+        std::cout << "============ " << STRINGIFY(COMPILATIONID) << std::endl;
+        
+        // ====================== ABSTRACT THIS ===========================
+        ExecutionPlan plan{}; 
+        std::ifstream sfile("/home/lized/Skrivbord/test/executionplan.json");
+        if(sfile) {
+            sfile >> plan;
+            if (plan.id == STRINGIFY(COMPILATIONID)) {
+                return;
+            } else {
+                plan.clear();
+            }
+        }
+        plan.id = STRINGIFY(COMPILATIONID);
+        // =================================================================
+
+
         //Skeleton::prefers_matrix;
 
         //PreferedContainer<pm, int> hi{};
         static constexpr size_t MAXSIZE = std::pow<size_t>(size_t(2), size_t(36));
         static constexpr size_t MAXPOW  = 8;//26; // TODO: 2^27-2^28 breaks my GPU :( TODO: borde sättas baserat på GPU capacity
         auto baseTwoPower = [](size_t exp) -> size_t { return std::pow<size_t>(size_t(2), exp); };
-        ExecutionPlan plan{}; 
 
         using ElwiseWrapped = ArgContainerTup<true, typename Skeleton::ElwiseArgs>;  
         ElwiseWrapped elwiseArg;
@@ -331,7 +352,7 @@ namespace autotuner
             print_index<UI...>::print();
 
             size_t repeats = 5; 
-            size_t size    = 0;
+            size_t size    = 0; // does not matter
             auto mintime = benchmark::TimeSpan::max();
             auto backendTypes = Backend::availableTypes();
             std::vector<BackendSpec> specs(backendTypes.size());
@@ -363,35 +384,16 @@ namespace autotuner
             
             std::cout << "BEST BACKEND " << bestDuration.first << std::endl;
             plan.insert(bestDuration.first, current_size);
-
-
-            // for (auto backend : skepu::Backend::availableTypes())
-            // {
-            //     skepu::BackendSpec spec(backend);
-            //     skeleton.setBackend(spec);
-            //     const auto start = std::chrono::steady_clock::now();
-            //     skeleton(std::get<OI>(resultArg)...,
-            //             std::get<EI>(elwiseArg)...,
-            //             std::get<CI>(containerArg)...,
-            //             std::get<UI>(uniArg)...);
-
-            //     const auto end = std::chrono::steady_clock::now();
-            //     auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-            //     std::cout << backend << "Chrono Time in microseconds: " << elapsed.count() << '\n';
-            // }
-            // print_index<EI...>::print();
-            // std::cout << "============" << std::endl;
         }
         
-        std::cout << "WRITING ########### "<< COMPILATIONID << std::endl;
-        std::ofstream file("/home/lized/Skrivbord/test/ok1337_2.json");
+        std::cout << "WRITING ########### "<< STRINGIFY(COMPILATIONID) << std::endl;
+        std::ofstream file("/home/lized/Skrivbord/test/executionplan.json");
         if(file) {
             file << plan << std::flush;
             std::cout << "###########OK" << std::endl;
         }
 
-        std::ifstream sfile("/home/lized/Skrivbord/test/ok1337_2.json");
-        sfile >> plan;
+        
 
     }
 
