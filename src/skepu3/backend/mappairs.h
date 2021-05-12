@@ -5,7 +5,7 @@
 #ifndef MAPPAIRS_H
 #define MAPPAIRS_H
 
-#include "./auto-tuner.h"
+#include "skepu3/backend/autotuning/tuneable.h"
 using namespace autotuner;
 
 namespace skepu
@@ -24,7 +24,7 @@ namespace skepu
 		 *  Result is a Matrix.
 		 */
 		template<size_t Varity, size_t Harity, typename MapPairsFunc, typename CUDAKernel, typename CLKernel>
-		class MapPairs : public SkeletonBase, public Tuner<MapPairs<Varity, Harity, MapPairsFunc, CUDAKernel, CLKernel>>
+		class MapPairs : public SkeletonBase, public Tuneable<MapPairs<Varity, Harity, MapPairsFunc, CUDAKernel, CLKernel>>
 		{
 			// ==========================    Type definitions   ==========================
 			

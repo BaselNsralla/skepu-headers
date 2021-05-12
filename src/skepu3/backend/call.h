@@ -5,8 +5,8 @@
 #ifndef CALL_H
 #define CALL_H
 
+#include "skepu3/backend/autotuning/tuneable.h"
 
-#include "./auto-tuner.h"
 using namespace autotuner;
 
 namespace skepu
@@ -28,7 +28,7 @@ namespace skepu
 		 *  takes whole containers (vectors, matrices). The container variants are merely wrappers for the functions which takes iterators as parameters.
 		 */
 		template<typename CallFunc, typename CUDAKernel, typename CLKernel>
-		class Call : public SkeletonBase, public Tuner<Call<CallFunc, CUDAKernel, CLKernel>>
+		class Call : public SkeletonBase, public Tuneable<Call<CallFunc, CUDAKernel, CLKernel>>
 
 		{
 			static constexpr size_t numArgs = CallFunc::totalArity;
