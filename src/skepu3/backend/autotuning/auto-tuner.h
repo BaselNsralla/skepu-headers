@@ -56,27 +56,19 @@ namespace autotuner
     using ConditionalSampler = typename std::conditional<isMapOverlap<Skeleton>::value, MapOverlapSampler<Skeleton>, ASampler<Skeleton>>::type;
 
     template<typename Skeleton, size_t... OI, size_t... EI, size_t... CI, size_t... UI>
-    void sampling(Skeleton& skeleton, pack_indices<OI...> oi, pack_indices<EI...> ei, pack_indices<CI...> ci, pack_indices<UI...> ui) 
+    ExecutionPlan sampling(Skeleton& skeleton, pack_indices<OI...> oi, pack_indices<EI...> ei, pack_indices<CI...> ci, pack_indices<UI...> ui) 
     {
         // ta ut varje parameter frå call args och använd dem i implementationen gör en benchmark och
         // spara undan, kanske låta resten av programmet köra medan vi håller på här?        
         std::cout << "============ " << STRINGIFY(COMPILATIONID) << std::endl;
         
-        // ====================== ABSTRACT THIS ===========================
-        ExecutionPlan plan{}; 
-        std::ifstream sfile("/home/lized/Skrivbord/test/executionplan.json");
-        if(sfile) {
-            sfile >> plan;
-            if (plan.id == STRINGIFY(COMPILATIONID)) {
-                return;
-            } else {
-                plan.clear();
-            }
+       
+        ExecutionPlan plan{};
+        if(ExecutionPlan::isReady(plan, STRINGIFY(COMPILATIONID), skeleton.tuneId))
+        {
+            return plan;
         }
-        plan.id = STRINGIFY(COMPILATIONID);
-        // =================================================================
-
-
+    
         //Skeleton::prefers_matrix;
 
         //PreferedContainer<pm, int> hi{};
@@ -138,13 +130,9 @@ namespace autotuner
             std::cout << "BEST BACKEND IS " << bestDuration.first << " FOR SIZE " << current_size << std::endl;
             plan.insert(bestDuration.first, current_size);
         }
-        
-        std::cout << "WRITING ########### "<< STRINGIFY(COMPILATIONID) << std::endl;
-        std::ofstream file("/home/lized/Skrivbord/test/executionplan.json");
-        if(file) {
-            file << plan << std::flush;
-            std::cout << "###########OK" << std::endl;
-        }
+        std::cout << skeleton.tuneId << " ------ " << std::endl;
+        ExecutionPlan::persist(plan, skeleton.tuneId);
+        return plan;
     }
 
     template<typename Skeleton>

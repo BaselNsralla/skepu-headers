@@ -44,7 +44,12 @@ namespace autotuner {
     class ExecutionPlan
     {
         BackendRanges ranges;
+        string filename;
 public:
+        
+        static bool isReady(ExecutionPlan& plan, string compileId,  string tuneId);
+        static void persist(ExecutionPlan& plan,  string tuneId);
+
         string id;
 
         void clear() {
@@ -191,4 +196,33 @@ public:
         return os;
     } 
 
+    bool ExecutionPlan::isReady(ExecutionPlan& plan, string compileId, string tuneId) 
+    {
+        string filename = compileId + tuneId; 
+        std::ifstream sfile("/home/lized/Skrivbord/test/" + compileId + tuneId + ".json");
+        if(sfile) {
+            sfile >> plan;
+            if (plan.id == compileId) 
+            {
+                return true;
+            } else {
+                plan.clear();
+            }
+        }
+        plan.id = compileId;
+        return false;     
+    }
+
+    void ExecutionPlan::persist(ExecutionPlan& plan, string tuneId) 
+    {
+        std::ofstream file("/home/lized/Skrivbord/test/" + plan.id + tuneId + ".json"); 
+        if(file) 
+        {
+            file << plan << std::flush;
+            std::cout << "###########OK" << std::endl;
+        }
+    }
+
+
 }
+

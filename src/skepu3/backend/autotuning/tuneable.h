@@ -3,6 +3,8 @@
 #include "skepu3/backend/autotuning/auto-tuner.h"
 #include <type_traits>
 #include <random>
+#include <string>
+
 namespace autotuner {
 
     template<typename T, typename = std::enable_if<true, decltype(T{}+1)>>
@@ -22,7 +24,7 @@ namespace autotuner {
         /*
             TODO: Choose between Tuning methods here as a param to autotuning
         */
-        long tuneId = Incremental<long>::next(); 
+        string tuneId = std::to_string(Incremental<long long>::next()); 
         //static const long long tuneId = Incremental<long>::value;//::next(); 
         void autotuning() 
         {   
