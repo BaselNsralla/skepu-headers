@@ -17,6 +17,10 @@
 # define SKEPU_AUTOTUNE
 #endif
 
+#define CL_USE_DEPRECATED_OPENCL_1_2_APIS
+#define CL_TARGET_OPENCL_VERSION 200
+
+
 
 /* TODO: Get rid of this hack if possible. */
 #ifdef SKEPU_MERCURIUM_CUDA

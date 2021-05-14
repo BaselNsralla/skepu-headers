@@ -26,17 +26,20 @@
         Se till att prefered container är rätt
         Se till att alla skeletons funkar med autotuning
         Se till att kunna använda autotune som backend
-        Kolla hur vi kan göra för ta bort och lägga till execution plan
-        Kolla hur vi kan göra för att justera max storlek på test
-        Kolla varför scan inte kör autotuning
+        Kolla hur vi kan göra för ta bort och lägga till execution plan 
+        Kolla hur vi kan göra för att justera max storlek på test [x]
+        Kolla varför scan inte kör autotuning [x]
         Printa COMPILEID
-            Få in COMPILEID i JSON filen
+            Få in COMPILEID i JSON filen [x]
 
-        Flush to disk with id, send uuid from bash
+        Flush to disk with id, send uuid from bash [x]
 
         Fixa så att ID:et sitter ordentligt och att EXecution plan skapas för varje skeleton
         - Filnamnet ska vara id:ochType eller ett id som genereas i klassen Map som sätts på 
-          filen 
+          filen [x]
+
+        Testa hoppa två två istället för att öka exponenten med 1
+        Future<ExecutionPlan> option
 */
 
 
@@ -74,8 +77,10 @@ namespace autotuner
         //PreferedContainer<pm, int> hi{};
         std::cout << "##### " << ConditionalSampler<Skeleton>::max_sample << std::endl;
         std::cout << Skeleton::prefers_matrix << " S " << std::endl;
-        static constexpr size_t MAXSIZE = std::pow<size_t>(size_t(2), size_t(36));
-        static constexpr size_t MAXPOW  = 10;//26; // TODO: 2^27-2^28 breaks my GPU :( TODO: borde sättas baserat på GPU capacity eller skeleton
+        
+        static constexpr size_t MAXPOW  = ConditionalSampler<Skeleton>::max_sample;//10;//26; // TODO: 2^27-2^28 breaks my GPU :( TODO: borde sättas baserat på GPU capacity eller skeleton
+        static constexpr size_t MAXSIZE = std::pow<size_t>(size_t(2), size_t(MAXPOW));
+
         auto baseTwoPower = [](size_t exp) -> size_t { return std::pow<size_t>(size_t(2), exp); };
 
         using ElwiseWrapped = ArgContainerTup<true, typename Skeleton::ElwiseArgs>;  
@@ -122,7 +127,8 @@ namespace autotuner
                 },
                 [&](Backend::Type backend, benchmark::TimeSpan duration) {
                     //(std::cout << "Median " << backend << " Took " << duration.count() << std::endl;
-                    if (bestDuration.second > duration) {
+                    if (bestDuration.second > duration) 
+                    {
                         bestDuration = {backend, duration};
                     }
                 });
@@ -136,8 +142,8 @@ namespace autotuner
     }
 
     template<typename Skeleton>
-    void samplingWrapper(Skeleton&  skeleton) {
-        sampling(
+    ExecutionPlan samplingWrapper(Skeleton&  skeleton) {
+        return sampling(
             skeleton,
             typename make_pack_indices<std::tuple_size<typename Skeleton::ResultArg>::value>::type(),
             typename make_pack_indices<std::tuple_size<typename Skeleton::ElwiseArgs>::value>::type(),

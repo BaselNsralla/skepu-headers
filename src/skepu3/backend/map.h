@@ -71,14 +71,7 @@ namespace skepu
 				tuner::tune(*this, std::forward<Args>(args)...);
 			}
 
-			// void autotuning() 
-			// {
-			// 	autotuner::tuneWrapper(*this);
-			// }
-
-
 			// =======================      Call operators      ==========================
-
 			template<typename... CallArgs>
 			auto operator()(CallArgs&&... args) -> decltype(get<0>(args...))
 			{
@@ -160,7 +153,8 @@ namespace skepu
 				if (disjunction((get<EI>(args...).size() < size)...))
 					SKEPU_ERROR("Non-matching input container sizes");
 
-				this->selectBackend(size);
+				
+				this->selectTunedBackend(size);
 
 				switch (this->m_selected_spec->activateBackend())
 				{

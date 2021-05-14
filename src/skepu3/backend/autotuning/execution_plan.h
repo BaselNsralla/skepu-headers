@@ -75,7 +75,7 @@ public:
         // Backend::Type optimalBackend(SizeRange range) 
         // {} hitta lower och upper bound?
 
-        Backend::Type optimalBackend(size_t targetSize)
+        BackendSpec optimalBackend(size_t targetSize)
         {
             // std::binary_search(ranges.begin(), ranges.end(), targetSize,
             // [](const int& target, const BackendRange& b) {
@@ -90,9 +90,9 @@ public:
             });
             if (range_it == ranges.end()) {
                 std::cout << "SKEPU ERROR" << std::endl;
-                return Backend::Type::CPU;
+                return BackendSpec(Backend::Type::CPU);
             } else {
-                return (*range_it).first;
+                return BackendSpec((*range_it).first);
             }
         }
         
