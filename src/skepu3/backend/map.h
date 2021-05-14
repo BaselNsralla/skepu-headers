@@ -154,7 +154,8 @@ namespace skepu
 					SKEPU_ERROR("Non-matching input container sizes");
 
 				
-				this->selectTunedBackend(size);
+				this->finalizeTuning();
+				this->selectBackend(size);
 
 				switch (this->m_selected_spec->activateBackend())
 				{

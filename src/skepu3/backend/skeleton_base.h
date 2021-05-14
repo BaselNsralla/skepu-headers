@@ -6,7 +6,7 @@
 #define SKELETON_BASE_H
 
 #include "skepu3/backend/environment.h"
-
+#include "skepu3/backend/autotuning/execution_plan.h"
 namespace skepu
 {
 	namespace backend
@@ -28,6 +28,14 @@ namespace skepu
 				
 				this->m_execPlan = plan;
 			}
+
+			void setTuneExecPlan(autotuner::ExecutionPlan* plan) 
+			{
+				if (this->m_tunePlan != nullptr)
+					delete this->m_tunePlan;
+				this->m_tunePlan = plan;
+			}
+
 			
 			void setBackend(BackendSpec const& spec)
 			{
@@ -43,7 +51,11 @@ namespace skepu
 			
 			const BackendSpec& selectBackend(size_t size = 0)
 			{
-				if (this->m_user_spec)
+				if (this->m_tunePlan) {
+					setBackend(this->m_tunePlan->optimalBackend(size));
+					this->m_selected_spec = this->m_user_spec;
+				}
+				else if (this->m_user_spec)
 					this->m_selected_spec = this->m_user_spec;
 				else if (this->m_execPlan)
 					this->m_selected_spec = &this->m_execPlan->find(size);
@@ -56,6 +68,7 @@ namespace skepu
 				return *this->m_selected_spec;
 			}
 			
+
 		protected:
 			SkeletonBase()
 			{
@@ -92,6 +105,8 @@ namespace skepu
 			/*! this is the pointer to execution plan that is active and should be used by implementations to check numOmpThreads and cudaBlocks etc. */
 			ExecPlan *m_execPlan = nullptr;
 			
+			autotuner::ExecutionPlan* m_tunePlan = nullptr;
+
 			const BackendSpec *m_user_spec = nullptr;
 			
 			const BackendSpec *m_selected_spec = nullptr;

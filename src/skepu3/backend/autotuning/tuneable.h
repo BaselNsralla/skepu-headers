@@ -26,12 +26,7 @@ namespace autotuner {
         //static const T value = []() { std::uniform_int_distribution<int> dist; std::mt19937 mt((std::random_device()())); return dist(mt); }();
     };
 
-    struct ExecutionPlanState {
-        ExecutionPlan plan;
-        bool isRead = false;
-    };
-
-    template<typename T>
+    template<typename Skeleton>
     struct Tuneable 
     {
         /*
@@ -41,43 +36,55 @@ namespace autotuner {
 
     private:
         std::future<ExecutionPlan> future;
-        ExecutionPlan plan;
         bool active = false;
-        std::atomic<bool> running{false};
-        
+        std::atomic<bool> useTuning{false};
+        std::thread::id tuningThreadId = std::this_thread::get_id();
+        std::promise<autotuner::ExecutionPlan> promise;
+
+        bool isTuningThread() {
+            return std::this_thread::get_id() == tuningThreadId;
+        }
 
     public:
         //static const long long tuneId = Incremental<long>::value;//::next(); 
-        void autotuning(TuneExecutionPolicy policy = TuneExecutionPolicy::async) 
+        void autotuning(TuneExecutionPolicy policy = TuneExecutionPolicy::seq) 
         {   
             // TODO: switch tuneType
             active = true;
-            running.store(true);
+            Skeleton& skeleton = *(static_cast<Skeleton*>(this));
+   
             if (policy == TuneExecutionPolicy::async) 
             {
-                future = std::async(std::launch::async, [&]{ 
-                    auto plan = samplingWrapper(*(static_cast<T*>(this))); 
-                    running.store(false);
-                    return plan;
-                });
+                future = promise.get_future();
+                // TODO: SET value on thread exit instead
+                std::thread thread = std::thread( [&skeleton]{ skeleton.promise.set_value(samplingWrapper(skeleton)); skeleton.useTuning.store(true); });
+                tuningThreadId = thread.get_id();
+                thread.detach();
+                // future = std::async(std::launch::async, [&]{ 
+                //     autotuner::ExecutionPlan plan = samplingWrapper(skeleton); 
+                //     skeleton.useTuning.store(true);
+                //     return plan;
+                // });
             } else 
             {
-                std::promise<ExecutionPlan> p;
-                future = p.get_future();
-                p.set_value(samplingWrapper(*(static_cast<T*>(this))));
-                running.store(false);
+                future = promise.get_future();
+                promise.set_value(samplingWrapper(skeleton));
+                skeleton.useTuning.store(true);
             }
 
         }
 
-        bool available() 
+        bool finalizeTuning() 
         {
-            if (!future.valid()) 
+            Skeleton& skeleton = *(static_cast<Skeleton*>(this));
+            if (!skeleton.useTuning.load() && isTuningThread()) {
+                return false; // If tuning is not used return false; 
+            } else if (!future.valid()) 
             {
                 return active; // true: It is active therefore future invalidity is because of being finished (makeAvailable was called before), or false which is not available. 
             }
-
-            plan = std::move(future.get());
+            std::cout << "WILL WAIT "<< std::endl;
+            skeleton.setTuneExecPlan(new ExecutionPlan(std::move(future.get())));
             return true;
         }
 
@@ -91,17 +98,18 @@ namespace autotuner {
             but due to asynchrounous support it won't be as clean.
             In case async solution does not yield great results, this will be moved to SkeletonBase
         */
-        const BackendSpec& selectTunedBackend(size_t size) 
-        {
+
+        // const BackendSpec& selectTunedBackend(size_t size) 
+        // {
             
-            T& skeleton = *(static_cast<T*>(this));
-            if(!running.load() && available()) 
-            {
-                skeleton.setBackend(plan.optimalBackend(size));
-            }
-            //std::cout << "SIze " << size << std::endl;
-            return skeleton.selectBackend(size);
-        }
+        //     T& skeleton = *(static_cast<T*>(this));
+        //     if(!skeleton.useTuning.load() && finalizeTuning()) 
+        //     {
+        //         skeleton.setBackend(plan.optimalBackend(size));
+        //     }
+        //     //std::cout << "SIze " << size << std::endl;
+        //     return skeleton.selectBackend(size);
+        // }
         
 
         // virtual ~Tuneable() {

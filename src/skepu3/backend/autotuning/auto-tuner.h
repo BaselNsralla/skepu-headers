@@ -75,8 +75,8 @@ namespace autotuner
         //Skeleton::prefers_matrix;
 
         //PreferedContainer<pm, int> hi{};
-        std::cout << "##### " << ConditionalSampler<Skeleton>::max_sample << std::endl;
-        std::cout << Skeleton::prefers_matrix << " S " << std::endl;
+        std::cout << "##### MAX SIZE: " << ConditionalSampler<Skeleton>::max_sample << std::endl;
+        std::cout << "##### PREFERS MATRIX: " << Skeleton::prefers_matrix << std::endl;
         
         static constexpr size_t MAXPOW  = ConditionalSampler<Skeleton>::max_sample;//10;//26; // TODO: 2^27-2^28 breaks my GPU :( TODO: borde sättas baserat på GPU capacity eller skeleton
         static constexpr size_t MAXSIZE = std::pow<size_t>(size_t(2), size_t(MAXPOW));
@@ -129,6 +129,7 @@ namespace autotuner
                     //(std::cout << "Median " << backend << " Took " << duration.count() << std::endl;
                     if (bestDuration.second > duration) 
                     {
+                        //std::cout << "Change from " << bestDuration.first << " To " << backend << std::endl;
                         bestDuration = {backend, duration};
                     }
                 });

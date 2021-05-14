@@ -112,7 +112,8 @@ namespace skepu
 				if (arg.size() < size)
 					SKEPU_ERROR("Map: Non-matching container sizes");
 				
-				this->selectTunedBackend(size);
+				this->finalizeTuning();
+				this->selectBackend(size);
 				
 				switch (this->m_selected_spec->activateBackend())
 				{
