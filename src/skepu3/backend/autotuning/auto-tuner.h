@@ -40,6 +40,16 @@
 
         Testa hoppa två två istället för att öka exponenten med 1
         Future<ExecutionPlan> option
+
+
+    TODO:
+        - Apply autotuning to all skeletons.
+        - See if there are otherways to handle incremental sampling size.
+        - Measure performance.
+        - Clean up outputs,
+        - Transfer ownership of Executionplan
+        - Set on thread exit.
+        - Cleanup
 */
 
 
@@ -71,7 +81,16 @@ namespace autotuner
         {
             return plan;
         }
-    
+        
+        std::cout << " ..... " << std::endl;
+        print_index<OI...>::print();
+        print_index<EI...>::print();
+        print_index<CI...>::print();
+        print_index<UI...>::print();
+        std::cout << "OI, EI, CI, UI" << std::endl;
+        //return plan;
+
+
         //Skeleton::prefers_matrix;
 
         //PreferedContainer<pm, int> hi{};
@@ -140,6 +159,7 @@ namespace autotuner
         std::cout << skeleton.tuneId << " ------ " << std::endl;
         ExecutionPlan::persist(plan, skeleton.tuneId);
         return plan;
+
     }
 
     template<typename Skeleton>

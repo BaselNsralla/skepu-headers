@@ -84,7 +84,7 @@ namespace autotuner {
                 return active; // true: It is active therefore future invalidity is because of being finished (makeAvailable was called before), or false which is not available. 
             }
             std::cout << "WILL WAIT "<< std::endl;
-            skeleton.setTuneExecPlan(new ExecutionPlan(std::move(future.get())));
+            skeleton.setTuneExecPlan(new ExecutionPlan(std::move(future.get()))); // TOOD: transfer ownership instead.
             return true;
         }
 
