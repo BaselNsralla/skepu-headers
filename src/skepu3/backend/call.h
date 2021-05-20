@@ -116,7 +116,7 @@ namespace skepu
 			void backendDispatch(pack_indices<AI...> ai, pack_indices<CI...> ci, CallArgs&&... args)
 			{
 			//	assert(this->m_execPlan != NULL && this->m_execPlan->isCalibrated());
-				
+				this->finalizeTuning();
 				this->selectBackend(0);
 				
 				switch (this->m_selected_spec->activateBackend())

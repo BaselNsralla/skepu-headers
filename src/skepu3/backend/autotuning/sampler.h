@@ -107,10 +107,10 @@ namespace autotuner
         struct Sampler 
         {
 
-            using ElwiseWrapped    = typename containerized_layer<Skeleton, typename Skeleton::ElwiseArgs>::type;//ArgContainerTup<pm, typename Skeleton::ElwiseArgs>;
-            using ResultWrapped    = typename containerized_layer<Skeleton, typename Skeleton::ResultArg>::type;//ArgContainerTup<pm, typename Skeleton::ResultArg>;
-            using ContainerWrapped = typename containerized_layer<Skeleton, typename Skeleton::ContainerArgs>::type;//ArgContainerTup<pm, typename Skeleton::ContainerArgs>;
-            using UniformWrapped   = typename Skeleton::UniformArgs; //typename containerized_layer<Skeleton, typename Skeleton::UniformArgs>::type;//ArgContainerTup<pm, typename Skeleton::UniformArgs>;
+            using ElwiseWrapped    = typename containerized_layer<Skeleton, typename Skeleton::ElwiseArgs>::type;       //ArgContainerTup<pm, typename Skeleton::ElwiseArgs>;
+            using ResultWrapped    = typename containerized_layer<Skeleton, typename Skeleton::ResultArg>::type;        //ArgContainerTup<pm, typename Skeleton::ResultArg>;
+            using ContainerWrapped = typename containerized_layer<Skeleton, typename Skeleton::ContainerArgs>::type;    //ArgContainerTup<pm, typename Skeleton::ContainerArgs>;
+            using UniformWrapped   = typename Skeleton::UniformArgs;                                                    //typename containerized_layer<Skeleton, typename Skeleton::UniformArgs>::type;//ArgContainerTup<pm, typename Skeleton::UniformArgs>;
 
             static const size_t gpu_capacity = 24; // or compute this
             

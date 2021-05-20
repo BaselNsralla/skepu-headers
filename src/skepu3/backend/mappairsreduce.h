@@ -116,6 +116,7 @@ namespace skepu
 					|| (this->m_mode == ReduceMode::ColWise && disjunction((get<OI>(args...).size() < Hsize)...)))
 					SKEPU_ERROR("Non-matching output container size");
 
+				this->finalizeTuning();
 				this->selectBackend(Vsize + Hsize);
 
 				switch (this->m_selected_spec->activateBackend())

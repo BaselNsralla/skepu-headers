@@ -130,6 +130,7 @@ namespace skepu
 				if (disjunction((get<EI, CallArgs...>(args...).size() < size)...))
 					SKEPU_ERROR("Non-matching container sizes");
 
+				this->finalizeTuning();
 				this->selectBackend(size);
 
 				switch (this->m_selected_spec->activateBackend())

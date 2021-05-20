@@ -170,7 +170,7 @@ namespace skepu
 				const size_t size = arg.size();
 				
 				// TODO: check size
-				
+				this->finalizeTuning();
 				this->selectBackend(size);
 				
 				VectorIterator<T> it = res.begin();

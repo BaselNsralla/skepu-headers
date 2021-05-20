@@ -158,6 +158,7 @@ namespace skepu
 				if (disjunction((get<HEI, CallArgs...>(args...).size() < Hsize)...))
 					SKEPU_ERROR("Non-matching horizontal container sizes");
 				
+				this->finalizeTuning();
 				this->selectBackend(Vsize + Hsize);
 				
 				switch (this->m_selected_spec->activateBackend())

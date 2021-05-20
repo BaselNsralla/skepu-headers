@@ -225,6 +225,7 @@ namespace skepu
 				typename make_pack_indices<anyCont, 0>::type any_indices;
 				typename make_pack_indices<sizeof...(CallArgs), anyCont>::type const_indices;
 				
+				this->finalizeTuning();
 				this->selectBackend(arg.size());
 					
 				switch (this->m_selected_spec->activateBackend())
@@ -267,6 +268,7 @@ namespace skepu
 				typename make_pack_indices<anyCont, 0>::type any_indices;
 				typename make_pack_indices<sizeof...(CallArgs), anyCont>::type const_indices;
 				
+				this->finalizeTuning();
 				this->selectBackend(arg.size());
 				
 				size_t numrows = arg.total_rows();
@@ -559,6 +561,7 @@ namespace skepu
 				auto &arg = get<outArity>(args...);
 				// End remove
 				
+				this->finalizeTuning();
 				this->selectBackend(get<0>(args...).size());
 					
 				switch (this->m_selected_spec->activateBackend())
@@ -758,6 +761,7 @@ namespace skepu
 				auto &arg = get<outArity>(args...);
 				// End remove
 				
+				this->finalizeTuning();
 				this->selectBackend(get<0>(args...).size());
 					
 				switch (this->m_selected_spec->activateBackend())
