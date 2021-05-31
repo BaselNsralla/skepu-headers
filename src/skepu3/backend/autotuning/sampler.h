@@ -8,6 +8,7 @@
 #include <tuple>
 #include <random>
 #include <skepu3/backend/autotuning/dimensional_sequence.h>
+#include <cmath>
 using namespace skepu;
 using namespace skepu::backend;
 using namespace autotuner::helpers;
@@ -16,7 +17,9 @@ namespace autotuner
 {
 
     using context = std::initializer_list<int>;
-
+ 
+    size_t base2Pow(size_t exp) { return std::pow<size_t>(size_t(2), exp); }
+ 
     namespace sample 
     {
 
@@ -98,6 +101,8 @@ namespace autotuner
             }
 
         };
+
+        
         
         template<typename A, typename B, typename C, typename D>
         struct SampledArgs {
@@ -170,15 +175,16 @@ namespace autotuner
             {
                 SampledArgs<ResultWrapped, ElwiseWrapped, ContainerWrapped, UniformWrapped> result;
 
-                size_t kernel = std::max<size_t>(2, 0.2*ResSize);
-                size_t padedSize = ResSize + (kernel*2);
+                size_t outputSize = base2Pow(ResSize);
+                size_t kernel     = std::max<size_t>(2, 0.2*outputSize);
+                size_t padedSize  = outputSize + (kernel*2);
                 skeleton.setOverlap(kernel, kernel); 
                 
                 //size_t& k = std::get<0>(uniArg); k=1;
             
-                foreach::sample<OI...>(result.resultArg,    ResSize);
+                foreach::sample<OI...>(result.resultArg,    outputSize);
                 foreach::sample<EI...>(result.elwiseArg,    padedSize);
-                foreach::sample<CI...>(result.containerArg, ContSize);
+                foreach::sample<CI...>(result.containerArg, base2Pow(ContSize));
                 std::get<0>(result.uniArg) = 3; // this is a constant
                 return result;
                 // this->resultArg    = std::move(resultArg);
@@ -274,10 +280,10 @@ namespace autotuner
                     pack_indices<UI...>) // Vi kan få sizes här och de kommer alltid ha samma ordning, så en index_sequence här
             {
                 SampledArgs<ResultWrapped, ElwiseWrapped, ContainerWrapped, UniformWrapped> result;
-                foreach::sample<OI...>(result.resultArg,    ResSize);
-                foreach::sample<EI...>(result.elwiseArg,    ElemSize);
-                foreach::sample<CI...>(result.containerArg, ContSize);
-                foreach::sample<UI...>(result.uniArg,       UniSize);
+                foreach::sample<OI...>(result.resultArg,    base2Pow(ResSize));
+                foreach::sample<EI...>(result.elwiseArg,    base2Pow(ElemSize));
+                foreach::sample<CI...>(result.containerArg, base2Pow(ContSize));
+                foreach::sample<UI...>(result.uniArg,       base2Pow(UniSize));
                 return result;
                 /*
                     for each non empty type, but its object in the applied tuple

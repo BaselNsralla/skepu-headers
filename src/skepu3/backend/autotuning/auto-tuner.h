@@ -16,8 +16,7 @@
 #include <skepu3/backend/autotuning/helpers.h>
 #include <skepu3/backend/autotuning/sampler.h>
 #include <skepu3/backend/autotuning/sample_runner.h>
-#define STRINGIFY_(x) #x
-#define STRINGIFY(x) STRINGIFY_(x)
+
 
 //#include <skepu3/backend/map.h>
 //#include <skepu3/backend/mapoverlap.h> Skapara problem
@@ -74,15 +73,15 @@ namespace autotuner
     {
         // ta ut varje parameter frå call args och använd dem i implementationen gör en benchmark och
         // spara undan, kanske låta resten av programmet köra medan vi håller på här?        
-        std::cout << "============ " << STRINGIFY(COMPILATIONID) << std::endl;
+        //std::cout << "============ " << STRINGIFY(COMPILATIONID) << std::endl;
         
-       
+       /*
         ExecutionPlan plan{};
         if(ExecutionPlan::isReady(plan, STRINGIFY(COMPILATIONID), skeleton.tuneId))
         {
             return plan;
         }
-        
+        */
         std::cout << " ..... " << std::endl;
         print_index<OI...>::print();
         print_index<EI...>::print();
@@ -101,7 +100,7 @@ namespace autotuner
         static constexpr size_t MAXPOW  = ConditionalSampler<Skeleton>::max_sample;//10;//26; // TODO: 2^27-2^28 breaks my GPU :( TODO: borde sättas baserat på GPU capacity eller skeleton
         static constexpr size_t MAXSIZE = std::pow<size_t>(size_t(2), size_t(MAXPOW));
 
-        auto baseTwoPower = [](size_t exp) -> size_t { return std::pow<size_t>(size_t(2), exp); };
+        //auto baseTwoPower = [](size_t exp) -> size_t { return std::pow<size_t>(size_t(2), exp); };
 
         using ElwiseWrapped = ArgContainerTup<true, typename Skeleton::ElwiseArgs>;  
         ElwiseWrapped elwiseArg;
@@ -118,7 +117,7 @@ namespace autotuner
         using NormalizedSequence = typename normalize<RawSequence, typename SRT::ResultWrapped, typename SRT::ElwiseWrapped, typename SRT::ContainerWrapped, typename SRT::UniformWrapped>::type;
 
         SampleRunner<SRT, NormalizedSequence, pack_indices<OI...>, pack_indices<EI...>, pack_indices<CI...>, pack_indices<UI...>> runner{SRT(skeleton)};
-        runner.start();
+        return runner.start();
 
         //skapa srt i runner och låta srt sköta samplingen för en size? 
         /*
@@ -176,8 +175,8 @@ namespace autotuner
         }
         std::cout << skeleton.tuneId << " ------ " << std::endl;
         ExecutionPlan::persist(plan, skeleton.tuneId);
-        */
         return plan;
+        */
 
     }
 
