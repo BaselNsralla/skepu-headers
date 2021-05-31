@@ -7,7 +7,7 @@
 #include <type_traits>
 #include <tuple>
 #include <random>
-
+#include <skepu3/backend/autotuning/dimensional_sequence.h>
 using namespace skepu;
 using namespace skepu::backend;
 using namespace autotuner::helpers;
@@ -99,7 +99,21 @@ namespace autotuner
 
         };
         
+        template<typename A, typename B, typename C, typename D>
+        struct SampledArgs {
+            A resultArg;
+            B elwiseArg;
+            C containerArg;
+            D uniArg;
 
+            // template<typename IndexSequence>
+            // void apply()  {
+            //     zot<
+            //     typename normalized_sequence<IndexSequence, A, B, C, D>::type,
+            //     A, B, C, D                
+            //     >(a, b, c, d);
+            // }
+        };
 
         // ============= SAMPLER CLASS  ==============
 
@@ -112,7 +126,7 @@ namespace autotuner
             using ContainerWrapped = typename containerized_layer<Skeleton, typename Skeleton::ContainerArgs>::type;    //ArgContainerTup<pm, typename Skeleton::ContainerArgs>;
             using UniformWrapped   = typename Skeleton::UniformArgs;                                                    //typename containerized_layer<Skeleton, typename Skeleton::UniformArgs>::type;//ArgContainerTup<pm, typename Skeleton::UniformArgs>;
 
-            static const size_t gpu_capacity = 24; // or compute this
+            static const size_t gpu_capacity = 16; // or compute this
             
             /*
             Vi behöver göra alla containers eftersom det varierar mellan alla skeletons och vissa har 0 i sig.
@@ -130,9 +144,8 @@ namespace autotuner
         {
             // Typerna för variablerna och sample metoden bör abstraheras till flera using deklarationer
             Skeleton& skeleton;
-            size_t size;
 
-            MapOverlapSampler(Skeleton& skeleton, size_t size): skeleton{skeleton}, size{size} {}
+            MapOverlapSampler(Skeleton& skeleton): skeleton{skeleton} {}
 
             using Parent = Sampler<Skeleton>;
 
@@ -141,34 +154,80 @@ namespace autotuner
             using typename Parent::ContainerWrapped;
             using typename Parent::UniformWrapped; 
 
-            ResultWrapped      resultArg;
-            ElwiseWrapped      elwiseArg;
-            ContainerWrapped   containerArg;
-            UniformWrapped     uniArg; //std::tuple<size_t> 
+            //ResultWrapped      resultArg;
+            //ElwiseWrapped      elwiseArg;
+            //ContainerWrapped   containerArg;
+            //UniformWrapped     uniArg; //std::tuple<size_t> 
 
-            template<size_t... OI, size_t... EI, size_t... CI, size_t... UI>
-            void sample(pack_indices<OI...>, 
+            template<size_t ResSize, size_t ElemSize, size_t ContSize, size_t UniSize, size_t... OI, size_t... EI, size_t... CI, size_t... UI>
+            SampledArgs<ResultWrapped, ElwiseWrapped, ContainerWrapped, UniformWrapped> 
+                     sample(
+                        index_sequence<ResSize, ElemSize, ContSize, UniSize>,
+                        pack_indices<OI...>, 
                         pack_indices<EI...>, 
                         pack_indices<CI...>, 
                         pack_indices<UI...>) 
             {
+                SampledArgs<ResultWrapped, ElwiseWrapped, ContainerWrapped, UniformWrapped> result;
 
-                size_t kernel = std::max<size_t>(2, 0.2*size);
-                size_t padedSize = size + (kernel*2);
+                size_t kernel = std::max<size_t>(2, 0.2*ResSize);
+                size_t padedSize = ResSize + (kernel*2);
                 skeleton.setOverlap(kernel, kernel); 
                 
                 //size_t& k = std::get<0>(uniArg); k=1;
             
-                foreach::sample<OI...>(resultArg,    size);
-                foreach::sample<EI...>(elwiseArg,    padedSize);
-                foreach::sample<CI...>(containerArg, size);
-                std::get<0>(uniArg) = 3; // this is a constant
-                            
+                foreach::sample<OI...>(result.resultArg,    ResSize);
+                foreach::sample<EI...>(result.elwiseArg,    padedSize);
+                foreach::sample<CI...>(result.containerArg, ContSize);
+                std::get<0>(result.uniArg) = 3; // this is a constant
+                return result;
                 // this->resultArg    = std::move(resultArg);
                 // this->elwiseArg    = std::move(elwiseArg);
                 // this->containerArg = std::move(containerArg);
             }
         };
+
+
+        // template<typename... Others, size_t... sizes>
+        // struct consume {};
+
+        // template<typename... A, size_t first, size_t... sizes>
+        // struct consume<tuple<A...>, first, sizes...> // consume ko
+        // {
+        //     using type = typename std::conditional<sizeof...(A) == 0, index_sequence<sizes..., 0>, index_sequence<sizes..., first>>::type;
+        // };
+
+        // template<typename... A, typename... Others, size_t first, size_t... sizes>
+        // struct consume<tuple<A...>, Others..., first, sizes...> 
+        // {
+        //     //sizeof...(A)
+        //     using type = typename std::conditional<sizeof...(A) == 0, typename std::conditional<Others..., first, sizes..., 0>, typename std::conditional<Others..., sizes..., first>>::type::type  
+        // };
+
+        // template<typename Is, typename A, typename B, typename C, typename D>
+        // struct normalize_sequence {};
+
+        // template<size_t... sizes, typename A, typename B, typename C, typename D>
+        // struct normailized_sequence<index_sequence<sizes...>, A, B, C, D>
+        // {
+        //     using type = consume<A, B, C, D, sizes...>::type; 
+        // };
+
+        // template<typename A, typename B, typename C, typename D>
+        // struct SampledArgs {
+        //     A a;
+        //     B b;
+        //     C c;
+        //     D d;
+
+            // template<typename IndexSequence>
+            // void apply()  {
+            //     zot<
+            //     typename normalized_sequence<IndexSequence, A, B, C, D>::type,
+            //     A, B, C, D                
+            //     >(a, b, c, d);
+            // }
+        //};
 
 
         /*
@@ -190,8 +249,7 @@ namespace autotuner
         {
 
             Skeleton& skeleton;
-            size_t size;
-            ASampler(Skeleton& skeleton, size_t size): skeleton{skeleton}, size{size} {}
+            ASampler(Skeleton& skeleton): skeleton{skeleton} {}
 
             using Parent = Sampler<Skeleton>;
 
@@ -201,22 +259,33 @@ namespace autotuner
             using typename Parent::UniformWrapped; 
 
 
-            ResultWrapped    resultArg;
-            ElwiseWrapped    elwiseArg;
-            ContainerWrapped containerArg;
-            UniformWrapped   uniArg;
+            // ResultWrapped    resultArg;
+            // ElwiseWrapped    elwiseArg;
+            // ContainerWrapped containerArg;
+            // UniformWrapped   uniArg;
 
-            template<size_t... OI, size_t... EI, size_t... CI, size_t... UI>  
-            void sample(
+            template<size_t ResSize, size_t ElemSize, size_t ContSize, size_t UniSize, size_t... OI, size_t... EI, size_t... CI, size_t... UI>  
+            SampledArgs<ResultWrapped, ElwiseWrapped, ContainerWrapped, UniformWrapped> 
+                sample(
+                    index_sequence<ResSize, ElemSize, ContSize, UniSize>,
                     pack_indices<OI...>, 
                     pack_indices<EI...>, 
                     pack_indices<CI...>, 
-                    pack_indices<UI...>) 
+                    pack_indices<UI...>) // Vi kan få sizes här och de kommer alltid ha samma ordning, så en index_sequence här
             {
-                foreach::sample<OI...>(resultArg,    size);
-                foreach::sample<EI...>(elwiseArg,    size);
-                foreach::sample<CI...>(containerArg, size);
-                foreach::sample<UI...>(uniArg,       size);
+                SampledArgs<ResultWrapped, ElwiseWrapped, ContainerWrapped, UniformWrapped> result;
+                foreach::sample<OI...>(result.resultArg,    ResSize);
+                foreach::sample<EI...>(result.elwiseArg,    ElemSize);
+                foreach::sample<CI...>(result.containerArg, ContSize);
+                foreach::sample<UI...>(result.uniArg,       UniSize);
+                return result;
+                /*
+                    for each non empty type, but its object in the applied tuple
+                    send the content as a variadict thin and the index_sequence 
+                    to impl
+                    impl will apply sample foreach on each param together with each index in the sequence :  ..., ... <- or something like that
+
+                */
             }
 
         };

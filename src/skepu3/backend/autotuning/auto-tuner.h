@@ -15,6 +15,7 @@
 #include <skepu3/backend/autotuning/execution_plan.h>
 #include <skepu3/backend/autotuning/helpers.h>
 #include <skepu3/backend/autotuning/sampler.h>
+#include <skepu3/backend/autotuning/sample_runner.h>
 #define STRINGIFY_(x) #x
 #define STRINGIFY(x) STRINGIFY_(x)
 
@@ -105,7 +106,22 @@ namespace autotuner
         using ElwiseWrapped = ArgContainerTup<true, typename Skeleton::ElwiseArgs>;  
         ElwiseWrapped elwiseArg;
 
+        using SRT = ConditionalSampler<Skeleton>;//Sampler<Skeleton>;
+        static constexpr size_t start_size = SRT::max_sample;
+        using RawSequence = typename setup_permuation_sequence<
+                                            typename seq_wrapper<start_size, typename SRT::ResultWrapped>::type, 
+                                            typename seq_wrapper<start_size, typename SRT::ElwiseWrapped>::type, 
+                                            typename seq_wrapper<start_size, typename SRT::ContainerWrapped>::type, 
+                                            typename seq_wrapper<start_size, typename SRT::UniformWrapped>::type
+                                            >::type;
 
+        using NormalizedSequence = typename normalize<RawSequence, typename SRT::ResultWrapped, typename SRT::ElwiseWrapped, typename SRT::ContainerWrapped, typename SRT::UniformWrapped>::type;
+
+        SampleRunner<SRT, NormalizedSequence, pack_indices<OI...>, pack_indices<EI...>, pack_indices<CI...>, pack_indices<UI...>> runner{SRT(skeleton)};
+        runner.start();
+
+        //skapa srt i runner och låta srt sköta samplingen för en size? 
+        /*
         for (size_t i = 4; i <= MAXPOW; ++i) 
         {
             size_t current_size = baseTwoPower(i);
@@ -125,7 +141,9 @@ namespace autotuner
             size_t size    = 0; // does not matter
            
             auto backendTypes = Backend::availableTypes();
+
             std::vector<BackendSpec> specs(backendTypes.size());
+
             std::transform(backendTypes.begin(), backendTypes.end(), specs.begin(), [](Backend::Type& type) {
                 return BackendSpec(type);
             });
@@ -158,6 +176,7 @@ namespace autotuner
         }
         std::cout << skeleton.tuneId << " ------ " << std::endl;
         ExecutionPlan::persist(plan, skeleton.tuneId);
+        */
         return plan;
 
     }
