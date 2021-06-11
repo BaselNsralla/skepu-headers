@@ -8,6 +8,10 @@
 #include <string>
 #include <sstream>
 
+#include <skepu3/external/json.hpp>
+
+// for convenience
+using json = nlohmann::json;
 
 // template<typename T>
 // struct SerachFunctor 

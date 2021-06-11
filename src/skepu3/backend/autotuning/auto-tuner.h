@@ -1,7 +1,5 @@
-
 #ifndef AUTOTUNER_H
 #define AUTOTUNER_H
-
 #include <skepu3/impl/meta_helpers.hpp>
 #include <tuple>
 #include <iostream>
@@ -16,7 +14,7 @@
 #include <skepu3/backend/autotuning/helpers.h>
 #include <skepu3/backend/autotuning/sampler.h>
 #include <skepu3/backend/autotuning/sample_runner.h>
-
+#include <skepu3/backend/autotuning/arg_sequence.h>
 
 //#include <skepu3/backend/map.h>
 //#include <skepu3/backend/mapoverlap.h> Skapara problem
@@ -51,16 +49,18 @@
         - Set on thread exit.
         - Cleanup
 */
-
-
 using namespace skepu;
 using namespace skepu::backend;
 using namespace autotuner::helpers;
 using namespace autotuner::sample;
+using std::tuple;
+
 
 namespace autotuner
 {   
     
+
+
     // ======================= Autotuning ========================================================
     template<typename Skeleton>
     using isMapOverlap = typename std::integral_constant<bool, Skeleton::skeletonType == SkeletonType::MapOverlap2D>;
@@ -74,7 +74,9 @@ namespace autotuner
         // ta ut varje parameter frå call args och använd dem i implementationen gör en benchmark och
         // spara undan, kanske låta resten av programmet köra medan vi håller på här?        
         //std::cout << "============ " << STRINGIFY(COMPILATIONID) << std::endl;
-        
+        generate_sequence(skeleton);
+
+
        /*
         ExecutionPlan plan{};
         if(ExecutionPlan::isReady(plan, STRINGIFY(COMPILATIONID), skeleton.tuneId))
