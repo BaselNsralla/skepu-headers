@@ -356,7 +356,7 @@ namespace autotuner {
         //size_t size = sizeof...(Types);
         ArgPerm argSize;
         context { (argSize.add(combinations<true>(Types())), 0)... };
-        argSize.permutations();
+        argSize.permutations(permutate ? Mechanism::ALL : Mechanism::SYMETRIC);
         return argSize;
     };
 
@@ -365,7 +365,7 @@ namespace autotuner {
         //size_t size = sizeof...(Types);
         ArgPerm argSize;
         context { (argSize.add(combinations<false>(Types())), 0)... };
-        argSize.permutations();
+        argSize.permutations(permutate ? Mechanism::ALL : Mechanism::SYMETRIC);
         return argSize;
     };
 
@@ -395,7 +395,7 @@ namespace autotuner {
     template<typename T>
     ArgCatPerm resolve_form(Single<T>) {
         ArgCatPerm perm;
-        context { (perm.add(arg_combinations(T(), false)), 0) }; 
+        context { (perm.add(arg_combinations(T(), true)), 0) }; 
         perm.permutations();
         std::cout << "CATEGORT:: \n";
         
@@ -455,9 +455,9 @@ namespace autotuner {
         
         ArgSequence argSeq = configured_sequence(
             Permutation<
-                Single<Ultra<typename Skeleton::ResultArg>>,
-                Single<Ultra<typename Skeleton::ElwiseArgs>>,
-
+                //Single<Ultra<typename Skeleton::ResultArg>>,
+                //Single<Ultra<typename Skeleton::ElwiseArgs>>,
+                Group<Standard<typename Skeleton::ResultArg>, Standard< typename Skeleton::ElwiseArgs>>,
                 Single<Ultra<typename Skeleton::ContainerArgs>>,
                 Single<Ultra<typename Skeleton::UniformArgs>>
             >()
@@ -467,14 +467,15 @@ namespace autotuner {
         for (auto& a: argSeq.samples) { // En hel sample för varje element
             std::cout << "{" << std::endl;
             for (auto& b: a) { // En hel variabel Input, output, uniform och gänget 
-                std::cout << "\t\t {" << std::endl;
+                std::cout << "\t {" << std::endl;
+                std::cout << "\t\t";
                 for (auto& c: b)  // Size?
                 {
                     std::cout << c.x << ", ";
                 }
-                std::cout << "\n\t\t }" << std::endl;
+                std::cout << "\n\t }" << std::endl;
             } 
-            std::cout << "} \n\n" << std::endl;
+            std::cout << "} \n" << std::endl;
         }
 
 
