@@ -9,6 +9,8 @@
 #include <random>
 #include <skepu3/backend/autotuning/dimensional_sequence.h>
 #include <cmath>
+#include <skepu3/backend/autotuning/arg_sequence.h>
+
 using namespace skepu;
 using namespace skepu::backend;
 using namespace autotuner::helpers;
@@ -58,6 +60,7 @@ namespace autotuner
 
 
         // ============= SAMPLE IMPLEMENTATION ===================
+        /*
         template<typename T>
         T random(size_t to) {
             std::random_device dev;
@@ -65,40 +68,51 @@ namespace autotuner
             std::uniform_real_distribution<float> dist6(1, (float)to); // distribution in range [1, 6]
             return static_cast<T>(dist6(rng));
         }
-
-        template<typename T>
-        void sample_impl(T& a, size_t size) {
+        */
+        template<size_t pos, typename T>
+        void sample_impl(T& a, std::vector<Size> sizes) {
             std::cout << "##### Fix sampling of uniform arguments #####" << std::endl;
-            a = random<T>(size);// std::max<size_t>(2, 0.2*size);//size;
-            std::cout << "Set to " << a << std::endl;
+            a = base2Pow(sizes[pos].x);
         }
         
-        template<typename T>
-        void sample_impl(skepu::Matrix<T>& mat, size_t size) {
+        template<size_t pos, typename T>
+        void sample_impl(skepu::Matrix<T>& mat, std::vector<Size> sizes) {
             //std::cout << "Matrix Sample " << size << std::endl;
-            mat.init(size, size, T{});
+            mat.init(base2Pow(sizes[pos].x), base2Pow(sizes[pos].y), T{});
         }
 
-        template<typename T>
-        void sample_impl(skepu::Vector<T>& vec, size_t size) {
+        template<size_t pos, typename T>
+        void sample_impl(skepu::Vector<T>& vec, std::vector<Size> sizes) {
             //std::cout << "Vector Sample" << std::endl;
-            vec.init(size, T{}); // Eller utan T{}
+            vec.init(base2Pow(sizes[pos].x), T{}); // Eller utan T{}
         }
 
         // Helper function to iterate and perform some function, Would not have been need if auto was available in lambda params  
         struct foreach
         {    
-            template<size_t... COUNT, typename Tuple>
-            static void sample(Tuple& tup, size_t size) 
-            {
-                context{ (sample_impl(std::get<COUNT>(tup), size), 0)... };
-            }
+        //     template<size_t... COUNT, typename Tuple>
+        //     static void sample(Tuple& tup, size_t size) 
+        //     {
+        //         context{ (sample_impl(std::get<COUNT>(tup), size), 0)... };
+        //     }
 
             template<size_t... COUNT, typename Tuple>
             static void print(Tuple& tup) 
             {
                 context{ (print_impl(std::get<COUNT>(tup)), 0)... };
             }
+
+            template<size_t... COUNT, typename Tuple>
+            static void sample(Tuple& tup, std::vector<Size> arg_vec) 
+            {
+                std::cout << " ONE ARGUMENT: " << std::endl;
+                for (Size& size : arg_vec) {
+                    std::cout << size.x << std::endl;
+                }
+                context{ (sample_impl<COUNT>(std::get<COUNT>(tup), arg_vec), 0)... };
+            }
+
+
 
         };
 
@@ -163,7 +177,7 @@ namespace autotuner
             //ElwiseWrapped      elwiseArg;
             //ContainerWrapped   containerArg;
             //UniformWrapped     uniArg; //std::tuple<size_t> 
-
+            /*
             template<size_t ResSize, size_t ElemSize, size_t ContSize, size_t UniSize, size_t... OI, size_t... EI, size_t... CI, size_t... UI>
             SampledArgs<ResultWrapped, ElwiseWrapped, ContainerWrapped, UniformWrapped> 
                      sample(
@@ -191,6 +205,40 @@ namespace autotuner
                 // this->elwiseArg    = std::move(elwiseArg);
                 // this->containerArg = std::move(containerArg);
             }
+            */
+            template<size_t... OI, size_t... EI, size_t... CI, size_t... UI>
+            SampledArgs<ResultWrapped, ElwiseWrapped, ContainerWrapped, UniformWrapped> 
+                sample(
+                    std::vector<std::vector<Size>> sample_vec,
+                    pack_indices<OI...>, 
+                    pack_indices<EI...>, 
+                    pack_indices<CI...>, 
+                    pack_indices<UI...>) // Vi kan få sizes här och de kommer alltid ha samma ordning, så en index_sequence här
+            {
+                SampledArgs<ResultWrapped, ElwiseWrapped, ContainerWrapped, UniformWrapped> result;
+
+                size_t outputSize = base2Pow(sample_vec[0][0].x);
+                size_t kernel     = std::max<size_t>(2, 0.2*outputSize);
+                size_t padedSize  = outputSize + (kernel*2);
+                skeleton.setOverlap(kernel, kernel); 
+
+                // TODO: !!!!! Det här bör inte göras här
+                std::vector<Size> output_sample_vec;
+                std::generate_n(std::back_inserter(output_sample_vec), sample_vec[0].size(), [&outputSize]() { return outputSize; });
+
+                std::vector<Size> elwise_sample_vec;
+                std::generate_n(std::back_inserter(elwise_sample_vec), sample_vec[0].size(), [&padedSize]() { return padedSize; });
+
+                foreach::sample<OI...>(result.resultArg,    output_sample_vec);
+                foreach::sample<EI...>(result.elwiseArg,    elwise_sample_vec);
+                foreach::sample<CI...>(result.containerArg, sample_vec[2]);
+                foreach::sample<UI...>(result.uniArg,       sample_vec[3]);
+                return result;
+
+
+            }
+
+
         };
 
 
@@ -270,29 +318,51 @@ namespace autotuner
             // ContainerWrapped containerArg;
             // UniformWrapped   uniArg;
 
-            template<size_t ResSize, size_t ElemSize, size_t ContSize, size_t UniSize, size_t... OI, size_t... EI, size_t... CI, size_t... UI>  
+            // template<size_t ResSize, size_t ElemSize, size_t ContSize, size_t UniSize, size_t... OI, size_t... EI, size_t... CI, size_t... UI>  
+            // SampledArgs<ResultWrapped, ElwiseWrapped, ContainerWrapped, UniformWrapped> 
+            //     sample(
+            //         index_sequence<ResSize, ElemSize, ContSize, UniSize>,
+            //         pack_indices<OI...>, 
+            //         pack_indices<EI...>, 
+            //         pack_indices<CI...>, 
+            //         pack_indices<UI...>) // Vi kan få sizes här och de kommer alltid ha samma ordning, så en index_sequence här
+            // {
+            //     SampledArgs<ResultWrapped, ElwiseWrapped, ContainerWrapped, UniformWrapped> result;
+            //     foreach::sample<OI...>(result.resultArg,    base2Pow(ResSize));
+            //     foreach::sample<EI...>(result.elwiseArg,    base2Pow(ElemSize));
+            //     foreach::sample<CI...>(result.containerArg, base2Pow(ContSize));
+            //     foreach::sample<UI...>(result.uniArg,       base2Pow(UniSize));
+            //     return result;
+            //     /*
+            //         for each non empty type, but its object in the applied tuple
+            //         send the content as a variadict thin and the index_sequence 
+            //         to impl
+            //         impl will apply sample foreach on each param together with each index in the sequence :  ..., ... <- or something like that
+
+            //     */
+            // }
+
+
+            template<size_t... OI, size_t... EI, size_t... CI, size_t... UI>
             SampledArgs<ResultWrapped, ElwiseWrapped, ContainerWrapped, UniformWrapped> 
                 sample(
-                    index_sequence<ResSize, ElemSize, ContSize, UniSize>,
+                    std::vector<std::vector<Size>> sample_vec,
                     pack_indices<OI...>, 
                     pack_indices<EI...>, 
                     pack_indices<CI...>, 
                     pack_indices<UI...>) // Vi kan få sizes här och de kommer alltid ha samma ordning, så en index_sequence här
             {
                 SampledArgs<ResultWrapped, ElwiseWrapped, ContainerWrapped, UniformWrapped> result;
-                foreach::sample<OI...>(result.resultArg,    base2Pow(ResSize));
-                foreach::sample<EI...>(result.elwiseArg,    base2Pow(ElemSize));
-                foreach::sample<CI...>(result.containerArg, base2Pow(ContSize));
-                foreach::sample<UI...>(result.uniArg,       base2Pow(UniSize));
+                foreach::sample<OI...>(result.resultArg,    sample_vec[0]);
+                foreach::sample<EI...>(result.elwiseArg,    sample_vec[1]);
+                foreach::sample<CI...>(result.containerArg, sample_vec[2]);
+                foreach::sample<UI...>(result.uniArg,       sample_vec[3]);
                 return result;
-                /*
-                    for each non empty type, but its object in the applied tuple
-                    send the content as a variadict thin and the index_sequence 
-                    to impl
-                    impl will apply sample foreach on each param together with each index in the sequence :  ..., ... <- or something like that
 
-                */
+
             }
+
+
 
         };
     }

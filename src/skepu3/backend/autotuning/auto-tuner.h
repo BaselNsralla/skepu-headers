@@ -74,7 +74,8 @@ namespace autotuner
         // ta ut varje parameter frå call args och använd dem i implementationen gör en benchmark och
         // spara undan, kanske låta resten av programmet köra medan vi håller på här?        
         //std::cout << "============ " << STRINGIFY(COMPILATIONID) << std::endl;
-        generate_sequence(skeleton);
+        
+        auto argSeq = generate_sequence(skeleton);
 
 
        /*
@@ -118,8 +119,20 @@ namespace autotuner
 
         using NormalizedSequence = typename normalize<RawSequence, typename SRT::ResultWrapped, typename SRT::ElwiseWrapped, typename SRT::ContainerWrapped, typename SRT::UniformWrapped>::type;
 
-        SampleRunner<SRT, NormalizedSequence, pack_indices<OI...>, pack_indices<EI...>, pack_indices<CI...>, pack_indices<UI...>> runner{SRT(skeleton)};
-        return runner.start();
+        SampleRunner<SRT, pack_indices<OI...>, pack_indices<EI...>, pack_indices<CI...>, pack_indices<UI...>> runner{SRT(skeleton)};
+        
+        //for(auto& sample: argSeq.samples) {
+            
+            
+            
+        //}
+
+        
+        
+        
+        
+        
+        return runner.start(argSeq.samples);
 
         //skapa srt i runner och låta srt sköta samplingen för en size? 
         /*
