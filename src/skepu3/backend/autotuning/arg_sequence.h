@@ -1,5 +1,4 @@
-#ifndef ARGSEQUENCE_H
-#define ARGSEQUENCE_H
+#pragma once
 #include <skepu3/impl/meta_helpers.hpp>
 #include <tuple>
 #include <iostream>
@@ -13,9 +12,12 @@
 #include <skepu3/backend/autotuning/execution_plan.h>
 #include <skepu3/backend/autotuning/helpers.h>
 #include <skepu3/backend/autotuning/sampler.h>
-#include <skepu3/backend/autotuning/sample_runner.h>
+//#include <skepu3/backend/autotuning/sample_runner.h>
 
 namespace autotuner {
+
+
+
     template<typename... T>
     struct Permutation {};
 
@@ -37,6 +39,8 @@ namespace autotuner {
         size_t y;
     };
 
+
+    using SampleVec = std::vector<std::vector<Size>>;
     using std::tuple; 
     using ArgCombo = std::vector<Size>;
     using ArgCatCombo = std::vector<ArgCombo>;
@@ -450,7 +454,7 @@ namespace autotuner {
 
 
     template<typename Skeleton>
-    void generate_sequence(Skeleton& skeleton) {
+    ArgSequence generate_sequence(Skeleton& skeleton) {
         //Group<Standard<typename Skeleton::ResultArg>, Standard< typename Skeleton::ElwiseArgs>>,
         
         ArgSequence argSeq = configured_sequence(
@@ -462,6 +466,7 @@ namespace autotuner {
                 Single<Ultra<typename Skeleton::UniformArgs>>
             >()
         );
+
 
         std::cout << "DONE SAMPLING " << argSeq.input.size() << std::endl;
         for (auto& a: argSeq.samples) { // En hel sample för varje element
@@ -477,8 +482,6 @@ namespace autotuner {
             } 
             std::cout << "} \n" << std::endl;
         }
-
-
+        return argSeq;
     }
 }
-#endif
