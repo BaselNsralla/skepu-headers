@@ -51,7 +51,7 @@ namespace skepu
 			
 			const BackendSpec& selectBackend(size_t size = 0)
 			{
-				if (this->m_tunePlan) {
+				if  (false) {//this->m_tunePlan) {
 					setBackend(this->m_tunePlan->optimalBackend(size));
 					this->m_selected_spec = this->m_user_spec;
 				}
