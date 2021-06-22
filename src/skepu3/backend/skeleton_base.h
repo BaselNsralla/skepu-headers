@@ -4,9 +4,13 @@
 
 #ifndef SKELETON_BASE_H
 #define SKELETON_BASE_H
+#include <tuple>
+#include <vector>
+#include <skepu3/backend/environment.h>
+#include <skepu3/backend/autotuning/execution_plan.h>
+#include <skepu3/backend/autotuning/size.h>
+#include <skepu3/backend/dispatch_size.h>
 
-#include "skepu3/backend/environment.h"
-#include "skepu3/backend/autotuning/execution_plan.h"
 namespace skepu
 {
 	namespace backend
@@ -51,11 +55,12 @@ namespace skepu
 			
 			const BackendSpec& selectBackend(size_t size = 0)
 			{
-				if  (false) {//this->m_tunePlan) {
-					setBackend(this->m_tunePlan->optimalBackend(size));
-					this->m_selected_spec = this->m_user_spec;
-				}
-				else if (this->m_user_spec)
+				// if  (false) {//this->m_tunePlan) {
+				// 	setBackend(this->m_tunePlan->optimalBackend(size));
+				// 	this->m_selected_spec = this->m_user_spec;
+				// }
+				//else 
+				if (this->m_user_spec)
 					this->m_selected_spec = this->m_user_spec;
 				else if (this->m_execPlan)
 					this->m_selected_spec = &this->m_execPlan->find(size);
@@ -68,6 +73,31 @@ namespace skepu
 				return *this->m_selected_spec;
 			}
 			
+			const BackendSpec& selectBackend(DispatchSize size)
+			{
+
+				if  (this->m_tunePlan) {//this->m_tunePlan) {
+					std::cout << "####### WILL TRY TO FIND TUNED BACKEND #######" << std::endl;
+					setBackend(this->m_tunePlan->optimalBackend(size));
+					this->m_selected_spec = this->m_user_spec;
+				}
+				else if (this->m_user_spec)
+					this->m_selected_spec = this->m_user_spec;
+				else if (this->m_execPlan)
+					this->m_selected_spec = &this->m_execPlan->find(size.legacy);
+				else
+					this->m_selected_spec = &internalGlobalBackendSpecAccessor();
+				
+			//	this->m_selected_spec = (this->m_user_spec != nullptr)
+			//		? this->m_user_spec
+			//		: &this->m_execPlan->find(size);
+				return *this->m_selected_spec;
+				//return *this->m_selected_spec;
+			}
+
+
+
+
 
 		protected:
 			SkeletonBase()
