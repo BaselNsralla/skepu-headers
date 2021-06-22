@@ -35,7 +35,7 @@ namespace autotuner
             
             std::pair<Backend::Type, benchmark::TimeSpan> bestDuration{Backend::Type::CPU, benchmark::TimeSpan::max()};
             
-            auto result = sampler.sample(
+            auto args = sampler.sample(
                         data,
                         pack_indices<OI...>(), 
                         pack_indices<EI...>(), 
@@ -49,17 +49,17 @@ namespace autotuner
                 [&](size_t, BackendSpec spec) {
                     sampler.skeleton.setBackend(spec);
                     sampler.skeleton(
-                        std::get<OI>(result.resultArg)..., // sprider eftersom OI är en pack
-                        std::get<EI>(result.elwiseArg)...,
-                        std::get<CI>(result.containerArg)...,
-                        std::get<UI>(result.uniArg)...);
+                        std::get<OI>(args.resultArg)..., // sprider eftersom OI är en pack
+                        std::get<EI>(args.elwiseArg)...,
+                        std::get<CI>(args.containerArg)...,
+                        std::get<UI>(args.uniArg)...);
                 },
                 [](benchmark::TimeSpan duration){
                     //std::cout << "Benchmark duration " << duration.count() << std::endl; 
                 },
-                [&](Backend::Type backend, benchmark::TimeSpan duration) {
+                [&]  (Backend::Type backend, benchmark::TimeSpan duration) mutable {
                     //(std::cout << "Median " << backend << " Took " << duration.count() << std::endl;
-                    if (bestDuration.second > duration) 
+                    if (duration < bestDuration.second )// && bestDuration.first != backend) 
                     {
                         std::cout << "Change from " << bestDuration.first << " To " << backend << std::endl;
                         bestDuration = {backend, duration};
@@ -69,7 +69,8 @@ namespace autotuner
             
             /// TODOD NEXT
             //std::cout << "BEST BACKEND IS " << bestDuration.first << " FOR SIZE " << base2Pow(ResSize) << std::endl;
-            //plan.insert(bestDuration.first, base2Pow(ResSize)); // Execution plan parser
+            //plan.insert(bestDuration.first,       base2Pow(ResSize)); // Execution plan parser
+            plan.insert(SizeModel(bestDuration.first, bestDuration.second.count(), data));
         }
 
 

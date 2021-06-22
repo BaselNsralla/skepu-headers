@@ -9,7 +9,8 @@
 #include <sstream>
 
 #include <skepu3/external/json.hpp>
-
+#include <skepu3/backend/autotuning/arg_sequence.h>
+#include <skepu3/backend/dispatch_size.h>
 // for convenience
 using json = nlohmann::json;
 
@@ -38,6 +39,7 @@ namespace autotuner {
     using BackendRange  = std::pair<Backend::Type, SizeRange>;
     using BackendRanges = std::vector<BackendRange>;
 
+    static constexpr size_t EQUALITY_TOLERANCE = 1;
    
     using std::stringstream;
     using std::ostream;
@@ -45,19 +47,68 @@ namespace autotuner {
     using std::istream;
     using std::getline;
 
+    struct SizeModel 
+    {
+        Backend::Type backend;
+        int64_t time_count;
+        SampleVec sample;
+
+        SizeModel(Backend::Type backend, int64_t time_count, SampleVec& sample) 
+            : backend{backend}, time_count{time_count}, sample{sample}
+        {}
+
+        bool inbound(std::vector<Size>& a, std::vector<Size>& b) {
+            bool equal = true;
+            for (auto ita = a.begin(), itb = b.begin(); ita != a.end() && itb != b.end(); ++ita, ++itb)
+            {
+                // problem med olika längdeR?
+                Size& a_size = *ita;
+                Size& b_size = *itb;
+                bool local_equal = a_size.equal(b_size, EQUALITY_TOLERANCE);
+                equal = equal && local_equal;
+  
+            }
+            //std::cout << " " << std::endl;
+            return equal;
+        }
+
+        bool operator==(SampleVec& other) 
+        {
+            bool reql = inbound(other[0], sample[0]);
+            bool eeql = inbound(other[1], sample[1]);
+            bool ceql = inbound(other[2], sample[2]);
+            bool ueql = inbound(other[3], sample[3]);
+            return eeql && eeql && ceql && ueql;
+        }
+
+        bool operator==(DispatchSize& other) 
+        {
+            bool reql = inbound(other.outputSize, sample[0]);
+            bool eeql = inbound(other.elwiseSize, sample[1]);
+            bool ceql = inbound(other.containerSize, sample[2]);
+            bool ueql = inbound(other.uniformSize, sample[3]);
+            return eeql && eeql && ceql && ueql;
+        }
+
+    };
+
+    using Models = std::vector<SizeModel>;
+
+
     class ExecutionPlan
     {
-        BackendRanges ranges;
+        //BackendRanges ranges;
+        Models models;
         string filename;
-public:
         
+public:
         static bool isReady(ExecutionPlan& plan, string compileId,  string tuneId);
         static void persist(ExecutionPlan& plan,  string tuneId);
 
         string id;
 
         void clear() {
-            ranges.clear();
+            models.clear();
             id.clear();
         }
 
@@ -66,27 +117,57 @@ public:
             Insertions Should be able to merge with the previous insert if they
             share the same optimal backend.  
         */
-        void insert(Backend::Type type, size_t size)//SizeRange range) 
+        void insert(SizeModel&& model)//SizeRange range) 
         {
             /* TODO: Make sure these come sorted
                 - If we add something that is bigger than the previous range we fail
             */ 
             
-            size_t rangeStart = ranges.size() > 0 ? ranges.back().second.second : 0;
-            ranges.push_back({type, {rangeStart, size}}); 
+            //size_t rangeStart = ranges.size() > 0 ? ranges.back().second.second : 0;
+            models.push_back(std::move(model)); 
         }
+
+
+
+
 
         // Backend::Type optimalBackend(SizeRange range) 
         // {} hitta lower och upper bound?
 
-        BackendSpec optimalBackend(size_t targetSize)
+        BackendSpec optimalBackend(DispatchSize& targetSize)
         {
+            // NOTE: Dispatched size kommer ha samma vector size på varje argument.
+            std::cout << "INSERTED DATA " << std::endl;
+            for (auto& s: targetSize.outputSize) {
+                std::cout << s.x << "|" << s.y << "  ,"; 
+            }
+            std::cout << std::endl;
+
+            for (auto& s: targetSize.elwiseSize) {
+                std::cout << s.x << "|" << s.y << "  ,"; 
+            }
+            std::cout << std::endl;
+
+            for (auto& s: targetSize.containerSize) {
+                std::cout << s.x << "|" << s.y << "  ,"; 
+            }
+            std::cout << std::endl;
+            
+            for (auto& s: targetSize.uniformSize) {
+                std::cout << s.x << "|" << s.y << "  ,"; 
+            }
+            std::cout << std::endl;
+
+
+
+            std::cout << std::endl;
             // std::binary_search(ranges.begin(), ranges.end(), targetSize,
             // [](const int& target, const BackendRange& b) {
             //     SizeRange const& range = b.second; 
             //     // lowbound is priorized, upper bound could contain marginal errors.
             //     return range.first >= target && target < range.second;
             // });
+            /*
             auto range_it = std::lower_bound(ranges.begin(), ranges.end(), targetSize, 
             [](const BackendRange& br, const int& target) {
                 SizeRange const& range = br.second; 
@@ -98,6 +179,16 @@ public:
             } else {
                 return BackendSpec((*range_it).first);
             }
+            */
+            for (auto& model: models) 
+            {
+                if(model == targetSize) 
+                {
+                    std::cout << "###########FOUND IT###########" << std::endl;
+                    return BackendSpec(model.backend);
+                }
+            }
+            return BackendSpec(Backend::Type::CPU);
         }
         
         friend ExecutionPlan& operator>>(istream& is, ExecutionPlan& executionPlan);
@@ -131,38 +222,38 @@ public:
 
     ExecutionPlan& operator>>(istream& is, ExecutionPlan& executionPlan) 
     {
-        BackendRanges ranges; 
-        string line;
+        // BackendRanges ranges; 
+        // string line;
 
-        getline(is, line); // {
+        // getline(is, line); // {
         
-        extract<string>(is, '"',':'); // id key
-        auto id = extract<string>(is, '"', '"'); // "16ced-213-cdf8123"
-        extract<string>(is, '\0', '\0'); // extract to the end
+        // extract<string>(is, '"',':'); // id key
+        // auto id = extract<string>(is, '"', '"'); // "16ced-213-cdf8123"
+        // extract<string>(is, '\0', '\0'); // extract to the end
 
-        while(getline(is, line))
-        {
-            stringstream ios(line);
+        // while(getline(is, line))
+        // {
+        //     stringstream ios(line);
 
-            auto rangeStart = extract<size_t>(ios, '"',  ':'); // "123:33" => 123
+        //     auto rangeStart = extract<size_t>(ios, '"',  ':'); // "123:33" => 123
             
-            auto rangeEnd   = extract<size_t>(ios, '\0', '"');
+        //     auto rangeEnd   = extract<size_t>(ios, '\0', '"');
             
-            if (ios.fail()) { break; }
+        //     if (ios.fail()) { break; }
             
-            std::string linepart; 
-            getline(ios, linepart, ios.widen(':'));
+        //     std::string linepart; 
+        //     getline(ios, linepart, ios.widen(':'));
             
-            auto key = extract<std::string>(ios, '"', '"');
+        //     auto key = extract<std::string>(ios, '"', '"');
 
-            getline(ios, linepart);
+        //     getline(ios, linepart);
 
-            ranges.emplace_back<Backend::Type, SizeRange>(Backend::typeFromString(key), {rangeStart, rangeEnd});
-        }
+        //     ranges.emplace_back<Backend::Type, SizeRange>(Backend::typeFromString(key), {rangeStart, rangeEnd});
+        // }
 
-        executionPlan.id     = std::move(id);
-        executionPlan.ranges = std::move(ranges);
-        std::cout << executionPlan << std::endl;
+        // executionPlan.id     = std::move(id);
+        // executionPlan.ranges = std::move(ranges);
+        // std::cout << executionPlan << std::endl;
 
         return executionPlan;
     }
@@ -173,28 +264,28 @@ public:
 
         os << "{" << '\n';
 
-        auto output = [&](BackendRange const& br, std::string&& sep) {
-            auto rangeStart = br.second.first;
-            auto rangeEnd   = br.second.second; 
-            os 
-            << '"' << rangeStart << ':' << rangeEnd << '"' // "123:500"
-            << ": " 
-            << '"' << br.first << '"'
-            << std::move(sep); 
-        };
+        // auto output = [&](BackendRange const& br, std::string&& sep) {
+        //     auto rangeStart = br.second.first;
+        //     auto rangeEnd   = br.second.second; 
+        //     os 
+        //     << '"' << rangeStart << ':' << rangeEnd << '"' // "123:500"
+        //     << ": " 
+        //     << '"' << br.first << '"'
+        //     << std::move(sep); 
+        // };
         
-        if (!executionPlan.ranges.empty())
-        {
-            os << '"' << "id" << '"' << ':' << '"' << executionPlan.id << '"' << ',' << '\n';
-            for (auto it = executionPlan.ranges.begin(); 
-                it != executionPlan.ranges.end() - 1; 
-                std::advance(it, 1))
-            {
-                output(*it, ",\n");
-            }
+        // if (!executionPlan.ranges.empty())
+        // {
+        //     os << '"' << "id" << '"' << ':' << '"' << executionPlan.id << '"' << ',' << '\n';
+        //     for (auto it = executionPlan.ranges.begin(); 
+        //         it != executionPlan.ranges.end() - 1; 
+        //         std::advance(it, 1))
+        //     {
+        //         output(*it, ",\n");
+        //     }
 
-            output(*(executionPlan.ranges.end() - 1), "\n");
-        }
+        //     output(*(executionPlan.ranges.end() - 1), "\n");
+        // }
 
         os << "}\n";
         return os;
