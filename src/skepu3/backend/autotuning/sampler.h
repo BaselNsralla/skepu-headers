@@ -105,10 +105,14 @@ namespace autotuner
             template<size_t... COUNT, typename Tuple>
             static void sample(Tuple& tup, std::vector<Size> arg_vec) 
             {
-                std::cout << " ONE ARGUMENT: " << std::endl;
-                for (Size& size : arg_vec) {
-                    std::cout << size.x << std::endl;
-                }
+
+
+                // std::cout << "ONE ARGUMENT: " << std::endl;
+                // for (Size& size : arg_vec) {
+                //     std::cout << size.x << std::endl;
+                // }
+
+                // NOTE: One Argument Category can consist of multiple elements COUNTs
                 context{ (sample_impl<COUNT>(std::get<COUNT>(tup), arg_vec), 0)... };
             }
 
