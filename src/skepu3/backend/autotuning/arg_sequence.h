@@ -9,14 +9,13 @@
 #include <cmath>        // std::pow
 #include <fstream>
 #include <skepu3/impl/common.hpp>
-#include <skepu3/backend/autotuning/execution_plan.h>
+//#include <skepu3/backend/autotuning/execution_plan.h>
 #include <skepu3/backend/autotuning/helpers.h>
-#include <skepu3/backend/autotuning/sampler.h>
+#include <skepu3/backend/autotuning/size.h>
+//#include <skepu3/backend/autotuning/sampler.h>
 //#include <skepu3/backend/autotuning/sample_runner.h>
 
 namespace autotuner {
-
-
 
     template<typename... T>
     struct Permutation {};
@@ -33,16 +32,11 @@ namespace autotuner {
     template<typename T>
     struct Standard {};
 
-    struct Size 
-    {
-        size_t x;
-        size_t y;
-    };
 
 
-    using SampleVec = std::vector<std::vector<Size>>;
     using std::tuple; 
-    using ArgCombo = std::vector<Size>;
+    using SampleVec   = std::vector<std::vector<Size>>;
+    using ArgCombo    = std::vector<Size>;
     using ArgCatCombo = std::vector<ArgCombo>;
 
     using context = std::initializer_list<int>;
@@ -281,9 +275,9 @@ namespace autotuner {
     template<>
     std::vector<Size> sizes2D<true>() {
         std::vector<Size> sizes;
-        for (size_t size_x{4u}; size_x < 16; size_x*=2)
+        for (size_t size_x{2u}; size_x < 12; ++size_x)
         {
-            for (size_t size_y{4u}; size_y < 16; size_y*=2)
+            for (size_t size_y{0u}; size_y < 12; ++size_y)
             {
                 sizes.push_back({size_x, size_y});
             }   
@@ -294,7 +288,7 @@ namespace autotuner {
     template<>
     std::vector<Size> sizes2D<false>() {
         std::vector<Size> sizes;
-        for (size_t size_x{4u}; size_x < 16; size_x*=2)
+        for (size_t size_x{2u}; size_x < 12; ++size_x)
         {
             sizes.push_back({size_x, size_x});
         }
@@ -304,7 +298,7 @@ namespace autotuner {
 
     std::vector<Size> sizes1D() {
         std::vector<Size> sizes;
-        for (size_t size_x{4u}; size_x < 16; size_x*=2)
+        for (size_t size_x{2u}; size_x < 18; ++size_x)
         {
             sizes.push_back({size_x, 0});
         }
@@ -472,13 +466,13 @@ namespace autotuner {
         for (auto& a: argSeq.samples) { // En hel sample för varje element
             std::cout << "{" << std::endl;
             for (auto& b: a) { // En hel variabel Input, output, uniform och gänget 
-                std::cout << "\t {" << std::endl;
-                std::cout << "\t\t";
+                std::cout << "    {" << std::endl;
+                std::cout << "\t";
                 for (auto& c: b)  // Size?
                 {
                     std::cout << c.x << ", ";
                 }
-                std::cout << "\n\t }" << std::endl;
+                std::cout << "\n    }" << std::endl;
             } 
             std::cout << "} \n" << std::endl;
         }
