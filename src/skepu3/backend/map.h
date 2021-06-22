@@ -155,7 +155,15 @@ namespace skepu
 
 				
 				this->finalizeTuning();
-				this->selectBackend(size);
+				//this->selectBackend(size);
+				this->selectBackend(
+					DispatchSize::Create(
+						size,
+						args_tuple<sizeof...(EI), CallArgs...>::template value<EI...>(args...),
+						args_tuple<sizeof...(AI), CallArgs...>::template value<AI...>(args...),
+						args_tuple<sizeof...(CI), CallArgs...>::template value<CI...>(args...)
+					)
+				);
 
 				switch (this->m_selected_spec->activateBackend())
 				{
