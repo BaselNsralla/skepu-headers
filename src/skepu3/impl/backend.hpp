@@ -126,7 +126,7 @@ namespace skepu
 
 	
 	
-	inline std::ostream &operator<<(std::ostream &o, Backend::Type b)
+	inline std::ostream &operator<<(std::ostream &o, Backend::Type const b)
 	{
 		switch (b)
 		{

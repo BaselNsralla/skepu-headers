@@ -53,6 +53,8 @@ namespace autotuner {
         int64_t time_count;
         SampleVec sample;
 
+        SizeModel() {}
+
         SizeModel(Backend::Type backend, int64_t time_count, SampleVec& sample) 
             : backend{backend}, time_count{time_count}, sample{sample}
         {}
@@ -92,17 +94,17 @@ namespace autotuner {
 
     };
 
-    using Models = std::vector<SizeModel>;
+    using ModelVec = std::vector<SizeModel>;
 
 
     class ExecutionPlan
     {
         //BackendRanges ranges;
-        Models models;
+        ModelVec models;
         string filename;
         
 public:
-        static bool isReady(ExecutionPlan& plan, string compileId,  string tuneId);
+        static bool exist(ExecutionPlan& plan, string compileId,  string tuneId);
         static void persist(ExecutionPlan& plan,  string tuneId);
 
         string id;
@@ -126,10 +128,6 @@ public:
             //size_t rangeStart = ranges.size() > 0 ? ranges.back().second.second : 0;
             models.push_back(std::move(model)); 
         }
-
-
-
-
 
         // Backend::Type optimalBackend(SizeRange range) 
         // {} hitta lower och upper bound?
@@ -158,9 +156,6 @@ public:
             }
             std::cout << std::endl;
 
-
-
-            std::cout << std::endl;
             // std::binary_search(ranges.begin(), ranges.end(), targetSize,
             // [](const int& target, const BackendRange& b) {
             //     SizeRange const& range = b.second; 
@@ -184,7 +179,7 @@ public:
             {
                 if(model == targetSize) 
                 {
-                    std::cout << "###########FOUND IT###########" << std::endl;
+                    std::cout << "########### FOUND IT ###########" << std::endl;
                     return BackendSpec(model.backend);
                 }
             }
@@ -193,6 +188,8 @@ public:
         
         friend ExecutionPlan& operator>>(istream& is, ExecutionPlan& executionPlan);
         friend ostream&       operator<<(ostream& os, ExecutionPlan const& executionPlan);
+        friend void           to_json(json& j,        ExecutionPlan const& ep);
+        friend void           from_json(json const& j, autotuner::ExecutionPlan& ep);
     };
 
     
@@ -254,7 +251,10 @@ public:
         // executionPlan.id     = std::move(id);
         // executionPlan.ranges = std::move(ranges);
         // std::cout << executionPlan << std::endl;
-
+        json j;
+        is >> j;
+        from_json(j, executionPlan);
+        //ExecutionPlan::persist(executionPlan, "4444444");
         return executionPlan;
     }
 
@@ -262,7 +262,7 @@ public:
     ostream& operator<<(ostream& os, ExecutionPlan const& executionPlan) 
     {
 
-        os << "{" << '\n';
+        //os << "{" << '\n';
 
         // auto output = [&](BackendRange const& br, std::string&& sep) {
         //     auto rangeStart = br.second.first;
@@ -287,15 +287,19 @@ public:
         //     output(*(executionPlan.ranges.end() - 1), "\n");
         // }
 
-        os << "}\n";
+        //os << "}\n";
+        json j = executionPlan;
+        os << std::setw(4) << j;
         return os;
     } 
 
-    bool ExecutionPlan::isReady(ExecutionPlan& plan, string compileId, string tuneId) 
+    bool ExecutionPlan::exist(ExecutionPlan& plan, string compileId, string tuneId) 
     {
         string filename = compileId + tuneId; 
         std::ifstream sfile("/home/lized/Skrivbord/test/" + compileId + tuneId + ".json");
-        if(sfile) {
+        
+        if(sfile) 
+        {
             sfile >> plan;
             if (plan.id == compileId) 
             {
@@ -304,6 +308,7 @@ public:
                 plan.clear();
             }
         }
+
         plan.id = compileId;
         return false;     
     }
@@ -314,10 +319,46 @@ public:
         if(file) 
         {
             file << plan << std::flush;
-            std::cout << "###########OK" << std::endl;
+            std::cout << "########### FLUSH OK: " << tuneId << std::endl;
         }
     }
 
+    void from_json(json const& j, SizeModel& sm)
+    {   
+        sm.backend       = Backend::typeFromString(j["backend"]);
+        SampleVec sample = j["sample"];
+        sm.sample        = std::move(sample); //j["sample"];
+        sm.time_count    = j["time"];
+        
+    } 
+    
+    void from_json(json const& j, ExecutionPlan& ep)
+    {
+        ep.id     = j["compilationId"];
+        std::vector<SizeModel> models;
+        for (auto& modelJson : j["models"]) 
+        {
+            SizeModel model;
+            from_json(modelJson, model);
+            models.push_back(model);
+        } 
+
+        ep.models = std::move(models);
+    } 
+
+    void to_json(json& j,  SizeModel const& sm) 
+    {
+        std::ostringstream oss;
+        oss << sm.backend;
+
+        j = json{{"backend", oss.str()}, {"time", sm.time_count} ,{"sample", sm.sample}};
+    }
+
+    void to_json(json& j, ExecutionPlan const& ep) 
+    {
+        j = json{{"compilationId", ep.id}, {"models", ep.models}};
+    }
 
 }
+
 
