@@ -52,7 +52,7 @@ namespace autotuner
                 },
                 [&]  (Backend::Type backend, benchmark::TimeSpan duration) mutable {
                     //(std::cout << "Median " << backend << " Took " << duration.count() << std::endl;
-                    if (duration < bestDuration.second )// && bestDuration.first != backend) 
+                    if (duration < bestDuration.second) // && bestDuration.first != backend
                     {
                         std::cout << "Change from " << bestDuration.first << " To " << backend << std::endl;
                         bestDuration = {backend, duration};

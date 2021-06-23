@@ -238,8 +238,6 @@ namespace autotuner
                 foreach::sample<CI...>(result.containerArg, sample_vec[2]);
                 foreach::sample<UI...>(result.uniArg,       sample_vec[3]);
                 return result;
-
-
             }
 
 
@@ -362,8 +360,6 @@ namespace autotuner
                 foreach::sample<CI...>(result.containerArg, sample_vec[2]);
                 foreach::sample<UI...>(result.uniArg,       sample_vec[3]);
                 return result;
-
-
             }
 
 
