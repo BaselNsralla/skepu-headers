@@ -156,25 +156,6 @@ public:
             }
             std::cout << std::endl;
 
-            // std::binary_search(ranges.begin(), ranges.end(), targetSize,
-            // [](const int& target, const BackendRange& b) {
-            //     SizeRange const& range = b.second; 
-            //     // lowbound is priorized, upper bound could contain marginal errors.
-            //     return range.first >= target && target < range.second;
-            // });
-            /*
-            auto range_it = std::lower_bound(ranges.begin(), ranges.end(), targetSize, 
-            [](const BackendRange& br, const int& target) {
-                SizeRange const& range = br.second; 
-                return range.second < target;
-            });
-            if (range_it == ranges.end()) {
-                std::cout << "SKEPU ERROR" << std::endl;
-                return BackendSpec(Backend::Type::CPU);
-            } else {
-                return BackendSpec((*range_it).first);
-            }
-            */
             for (auto& model: models) 
             {
                 if(model == targetSize) 
@@ -219,38 +200,6 @@ public:
 
     ExecutionPlan& operator>>(istream& is, ExecutionPlan& executionPlan) 
     {
-        // BackendRanges ranges; 
-        // string line;
-
-        // getline(is, line); // {
-        
-        // extract<string>(is, '"',':'); // id key
-        // auto id = extract<string>(is, '"', '"'); // "16ced-213-cdf8123"
-        // extract<string>(is, '\0', '\0'); // extract to the end
-
-        // while(getline(is, line))
-        // {
-        //     stringstream ios(line);
-
-        //     auto rangeStart = extract<size_t>(ios, '"',  ':'); // "123:33" => 123
-            
-        //     auto rangeEnd   = extract<size_t>(ios, '\0', '"');
-            
-        //     if (ios.fail()) { break; }
-            
-        //     std::string linepart; 
-        //     getline(ios, linepart, ios.widen(':'));
-            
-        //     auto key = extract<std::string>(ios, '"', '"');
-
-        //     getline(ios, linepart);
-
-        //     ranges.emplace_back<Backend::Type, SizeRange>(Backend::typeFromString(key), {rangeStart, rangeEnd});
-        // }
-
-        // executionPlan.id     = std::move(id);
-        // executionPlan.ranges = std::move(ranges);
-        // std::cout << executionPlan << std::endl;
         json j;
         is >> j;
         from_json(j, executionPlan);
@@ -261,33 +210,6 @@ public:
 
     ostream& operator<<(ostream& os, ExecutionPlan const& executionPlan) 
     {
-
-        //os << "{" << '\n';
-
-        // auto output = [&](BackendRange const& br, std::string&& sep) {
-        //     auto rangeStart = br.second.first;
-        //     auto rangeEnd   = br.second.second; 
-        //     os 
-        //     << '"' << rangeStart << ':' << rangeEnd << '"' // "123:500"
-        //     << ": " 
-        //     << '"' << br.first << '"'
-        //     << std::move(sep); 
-        // };
-        
-        // if (!executionPlan.ranges.empty())
-        // {
-        //     os << '"' << "id" << '"' << ':' << '"' << executionPlan.id << '"' << ',' << '\n';
-        //     for (auto it = executionPlan.ranges.begin(); 
-        //         it != executionPlan.ranges.end() - 1; 
-        //         std::advance(it, 1))
-        //     {
-        //         output(*it, ",\n");
-        //     }
-
-        //     output(*(executionPlan.ranges.end() - 1), "\n");
-        // }
-
-        //os << "}\n";
         json j = executionPlan;
         os << std::setw(4) << j;
         return os;
@@ -329,9 +251,8 @@ public:
         SampleVec sample = j["sample"];
         sm.sample        = std::move(sample); //j["sample"];
         sm.time_count    = j["time"];
-        
     } 
-    
+
     void from_json(json const& j, ExecutionPlan& ep)
     {
         ep.id     = j["compilationId"];
