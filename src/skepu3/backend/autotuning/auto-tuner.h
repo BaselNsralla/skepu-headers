@@ -69,8 +69,7 @@ namespace autotuner
     template<typename Skeleton, size_t... OI, size_t... EI, size_t... CI, size_t... UI>
     ExecutionPlan sampling(Skeleton& skeleton, pack_indices<OI...> oi, pack_indices<EI...> ei, pack_indices<CI...> ci, pack_indices<UI...> ui) 
     {
-        auto argSeq = generate_sequence(skeleton);
-
+       
         std::cout << "....." << std::endl;
         print_index<OI...>::print();
         print_index<EI...>::print();
@@ -90,7 +89,7 @@ namespace autotuner
             pack_indices<CI...>, 
             pack_indices<UI...>> runner{SRT(skeleton)};
                 
-        return runner.start(argSeq.samples);
+        return runner.start();//(argSeq.samples);
     }
 
     template<typename Skeleton>

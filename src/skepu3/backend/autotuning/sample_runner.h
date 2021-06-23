@@ -66,7 +66,7 @@ namespace autotuner
         }
 
 
-        ExecutionPlan start(std::vector<SampleVec>& allSamples) {
+        ExecutionPlan start() {
             auto backendTypes = Backend::availableTypes();
 
             std::vector<BackendSpec> specs(backendTypes.size());
@@ -81,6 +81,8 @@ namespace autotuner
                 return plan;
             }
             
+            auto allSamples = generate_sequence(sampler.skeleton).samples;
+
             //FÖR VARJE I Is... kör run => run kör sample och benchmark och vi får resultat in i
             //en plan variabel som skapas i konstruktorn här
             
