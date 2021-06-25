@@ -159,6 +159,7 @@ namespace skepu
 				this->selectBackend(
 					DispatchSize::Create(
 						size,
+						args_tuple<sizeof...(OI), CallArgs...>::template value<OI...>(args...),
 						args_tuple<sizeof...(EI), CallArgs...>::template value<EI...>(args...),
 						args_tuple<sizeof...(AI), CallArgs...>::template value<AI...>(args...),
 						args_tuple<sizeof...(CI), CallArgs...>::template value<CI...>(args...)

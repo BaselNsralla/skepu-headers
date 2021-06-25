@@ -6,19 +6,12 @@
 #include <skepu3/backend/autotuning/execution_plan.h>
 #include <skepu3/backend/autotuning/size.h>
 #include <functional>
-#include <cmath>
+
 
 namespace skepu
 {
 	namespace backend
 	{	
-		using std::log2;
-
-		template<typename T>
-		size_t ulog2(T num) {
-			return log2(num);
-		}
-
 		template<size_t ISize, typename... T>
 		struct args_tuple {
 
@@ -26,7 +19,17 @@ namespace skepu
 			static auto value(T&&... args) -> decltype(std::make_tuple(get<Is, T...>(args...)...))
 			{
 				return std::make_tuple(get<Is, T...>(args...)...);
-			}  
+			}
+
+
+			template<size_t... Is>
+			static auto value(pack_indices<Is...> , T... args) -> decltype(std::make_tuple(get<Is, T...>(args...)...))
+			{
+				return std::make_tuple(get<Is, T...>(args...)...);
+			}
+
+
+
 		}; 
 
 		template<typename... T>
@@ -36,13 +39,17 @@ namespace skepu
 			static std::tuple<> value(T&&... args) 
 			{
 				return std::tuple<>();
-			}  
+			}
+
+			template<size_t... Is>
+			static std::tuple<> value(pack_indices<Is...>, T... args)
+			{
+				return std::tuple<>();
+			}
+			
 		}; 
 
 
-		namespace AT = autotuner;
-
-		using AltSizeFunc = std::function<AT::Size(void)>;
 
 		template<size_t... Is>
 		struct seq { };
@@ -53,6 +60,13 @@ namespace skepu
 		template<size_t... Is>
 		struct gen_seq<0, Is...> : seq<Is...> { };
 
+		namespace AT = autotuner;
+
+		using AltSizeFunc = std::function<AT::Size(void)>;
+
+		static AltSizeFunc defaultAltSize = [] () {
+			return AT::Size{0,0};
+		};
 
 		template<typename T>
 		AT::Size get_size_impl(skepu::Matrix<T> p,  AltSizeFunc altSize) 
@@ -86,7 +100,7 @@ namespace skepu
 		}
 
 		template<typename... T, size_t... I>
-		std::vector<AT::Size> get_size(std::tuple<T...> paramGroup, seq<I...>, AltSizeFunc altSize) 
+		std::vector<AT::Size> get_size(std::tuple<T...> paramGroup, seq<I...>, AltSizeFunc altSize = defaultAltSize) 
 		{
 			//auto l = { (f(std::get<Is>(t)), 0)... }; ret l i värsta fall?
 			//context { (argSize.add(combinations<false>(Types())), 0)... };
@@ -106,22 +120,23 @@ namespace skepu
 			std::vector<AT::Size> uniformSize;
 			 
 			// TODO: hur kan vi ta in dem som referenser?
-			template< typename... In, typename... Cont, typename... Uni> //typename... Out,
+			template<typename... Res, typename... In, typename... Cont, typename... Uni> //typename... Out,
 			static DispatchSize Create(//std::tuple<Out...> outParams,
-							  size_t outSize, 
-							  std::tuple<In...> inParams, 
-							  std::tuple<Cont...> contParams, 
-							  std::tuple<Uni...> uniParams) 
+							  size_t essentialSize,
+							  std::tuple<Res...> resArg,
+							  std::tuple<In...> inArg, 
+							  std::tuple<Cont...> contArg, 
+							  std::tuple<Uni...> uniArg) 
 			{
-				auto outputSize = [&outSize]() { return AT::Size{ulog2(outSize), 0}; };
+				auto altSize = [&essentialSize]() { return AT::Size{ulog2(essentialSize), 0}; };
 				//get_size(inParams, gen_seq<sizeof...(In)>(), outputSize);
 
 				auto d = DispatchSize {
-					outSize,
-					{outputSize()}, 
-					get_size(inParams,   gen_seq<sizeof...(In)>(),   outputSize), 
-					get_size(contParams, gen_seq<sizeof...(Cont)>(), outputSize),
-					get_size(uniParams,  gen_seq<sizeof...(Uni)>(),  outputSize)
+					essentialSize,
+					get_size(resArg,  gen_seq<sizeof...(Res)>(),  altSize), 
+					get_size(inArg,   gen_seq<sizeof...(In)>(),   altSize), 
+					get_size(contArg, gen_seq<sizeof...(Cont)>(), altSize),
+					get_size(uniArg,  gen_seq<sizeof...(Uni)>(),  altSize)
 				};
 				// std::cout << "DISPATCH SIZE" << std::endl;
 				// for (auto& a: d.elwiseSize) {
