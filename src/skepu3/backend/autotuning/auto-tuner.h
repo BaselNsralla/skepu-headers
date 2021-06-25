@@ -89,7 +89,9 @@ namespace autotuner
             pack_indices<CI...>, 
             pack_indices<UI...>> runner{SRT(skeleton)};
                 
-        return runner.start();//(argSeq.samples);
+        auto plan = runner.start();//(argSeq.samples);
+        std::cout << "SAMPLING IS DONE!!!" << std::endl;
+        return plan;
     }
 
     template<typename Skeleton>

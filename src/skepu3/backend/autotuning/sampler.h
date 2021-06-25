@@ -115,13 +115,12 @@ namespace autotuner
                 // NOTE: One Argument Category can consist of multiple elements COUNTs
                 context{ (sample_impl<COUNT>(std::get<COUNT>(tup), arg_vec), 0)... };
             }
-
-
-
         };
 
-        
-        
+
+
+  
+
         template<typename A, typename B, typename C, typename D>
         struct SampledArgs {
             A resultArg;
@@ -138,8 +137,28 @@ namespace autotuner
             // }
         };
 
-        // ============= SAMPLER CLASS  ==============
+        template<typename Skeleton >
+        auto static_setup(Skeleton& skeleton) -> typename std::enable_if<Skeleton::skeletonType != SkeletonType::MapOverlap1D>::type 
+        { 
+            
+        }
 
+        template<typename Skeleton >
+        auto static_setup(Skeleton& skeleton) -> typename std::enable_if<Skeleton::skeletonType == SkeletonType::MapOverlap1D>::type 
+        {
+            // switch (skeleton.skeletonType) 
+            // {
+            //     case skepu::SkeletonType::MapOverlap1D:
+                    skeleton.setOverlap(2);
+            //         break;
+            //     default:
+            //         break;
+            // }
+        }
+
+
+
+        // ============= SAMPLER CLASS  ==============
         template<typename Skeleton>
         struct Sampler 
         {
@@ -210,33 +229,70 @@ namespace autotuner
                 // this->containerArg = std::move(containerArg);
             }
             */
+
+            // NOTE: This is for MapOverlap Only
+            template<typename... Ts>
+            void setOverlap(Skeleton& skeleton, std::tuple<Ts...>& args) 
+            {
+                //if (sizeof...(Ts) == 0) 
+                //{
+                    skeleton.setOverlap(1,1);
+                //} else {
+                //    skeleton.setOverlap(std::get<0>(args), std::get<0>(args));
+                //}
+            }
+
+            void setOverlap(Skeleton& skeleton, std::tuple<>& args)
+            {
+                skeleton.setOverlap(2,2);
+                skeleton.setEdgeMode(skepu::Edge::Duplicate); // NOTE!! kräver det ingen padding då?
+            }
+
+
             template<size_t... OI, size_t... EI, size_t... CI, size_t... UI>
             SampledArgs<ResultWrapped, ElwiseWrapped, ContainerWrapped, UniformWrapped> 
                 sample(
-                    std::vector<std::vector<Size>> sample_vec,
+                    std::vector<std::vector<Size>>& sample_vec,
                     pack_indices<OI...>, 
                     pack_indices<EI...>, 
                     pack_indices<CI...>, 
                     pack_indices<UI...>) // Vi kan få sizes här och de kommer alltid ha samma ordning, så en index_sequence här
             {
+                std::cout << "INEED HELKLLELLELE" << std::endl;
                 SampledArgs<ResultWrapped, ElwiseWrapped, ContainerWrapped, UniformWrapped> result;
+                
+                size_t outputSizeX = base2Pow(sample_vec[0][0].x);
+                size_t outputSizeY = base2Pow(sample_vec[0][0].y);
 
-                size_t outputSize = base2Pow(sample_vec[0][0].x);
-                size_t kernel     = std::max<size_t>(2, 0.2*outputSize);
-                size_t padedSize  = outputSize + (kernel*2);
-                skeleton.setOverlap(kernel, kernel); 
+                size_t kernelX     = std::max<size_t>(2, 0.2*outputSizeX);
+                size_t kernelY     = std::max<size_t>(2, 0.2*outputSizeY);
+
+                size_t padedSizeX  = outputSizeX + (kernelX*2);
+                size_t padedSizeY  = outputSizeY + (kernelY*2);
 
                 // TODO: !!!!! Det här bör inte göras här
-                std::vector<Size> output_sample_vec;
-                std::generate_n(std::back_inserter(output_sample_vec), sample_vec[0].size(), [&outputSize]() { return outputSize; });
+                auto output_sample_size = sample_vec[0].size();
+                std::vector<autotuner::Size> output_sample_vec(output_sample_size);
+                std::fill_n(output_sample_vec.begin(), output_sample_size, Size::Log2(outputSizeX, outputSizeY)); // TODO: Size rätt? eller behöver vi kolla typen
 
-                std::vector<Size> elwise_sample_vec;
-                std::generate_n(std::back_inserter(elwise_sample_vec), sample_vec[0].size(), [&padedSize]() { return padedSize; });
 
-                foreach::sample<OI...>(result.resultArg,    output_sample_vec);
-                foreach::sample<EI...>(result.elwiseArg,    elwise_sample_vec);
+                //std::generate_n(std::back_inserter(output_sample_vec), sample_vec[0].size(), [&outputSize]() { return outputSize; });
+                
+                auto elwise_sample_size = sample_vec[1].size();
+                std::vector<autotuner::Size> elwise_sample_vec(elwise_sample_size);
+                std::fill_n(elwise_sample_vec.begin(), elwise_sample_size, Size::Log2(padedSizeX, padedSizeY));
+                //std::generate_n(std::back_inserter(elwise_sample_vec), sample_vec[1].size(), [&padedSize]() { return padedSize; });
+                std::cout << "JELLLLEP " << std::endl;
+                foreach::sample<OI...>(result.resultArg,    sample_vec[0]);//output_sample_vec);
+                foreach::sample<EI...>(result.elwiseArg,    sample_vec[1]);//elwise_sample_vec);
                 foreach::sample<CI...>(result.containerArg, sample_vec[2]);
                 foreach::sample<UI...>(result.uniArg,       sample_vec[3]);
+
+                setOverlap(skeleton, result.uniArg);
+                std::cout << "HOW DOES IT LOOK LIKE:? " << std::endl;
+                std::cout << std::tuple_size<decltype(result.uniArg)>() << std::endl;
+
+                
                 return result;
             }
 
@@ -348,17 +404,24 @@ namespace autotuner
             template<size_t... OI, size_t... EI, size_t... CI, size_t... UI>
             SampledArgs<ResultWrapped, ElwiseWrapped, ContainerWrapped, UniformWrapped> 
                 sample(
-                    std::vector<std::vector<Size>> sample_vec,
+                    std::vector<std::vector<Size>>& sample_vec,
                     pack_indices<OI...>, 
                     pack_indices<EI...>, 
                     pack_indices<CI...>, 
                     pack_indices<UI...>) // Vi kan få sizes här och de kommer alltid ha samma ordning, så en index_sequence här
             {
                 SampledArgs<ResultWrapped, ElwiseWrapped, ContainerWrapped, UniformWrapped> result;
+            
                 foreach::sample<OI...>(result.resultArg,    sample_vec[0]);
+            
                 foreach::sample<EI...>(result.elwiseArg,    sample_vec[1]);
+            
                 foreach::sample<CI...>(result.containerArg, sample_vec[2]);
+            
                 foreach::sample<UI...>(result.uniArg,       sample_vec[3]);
+
+                static_setup<Skeleton>(skeleton);
+
                 return result;
             }
 

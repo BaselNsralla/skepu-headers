@@ -226,8 +226,45 @@ namespace skepu
 				typename make_pack_indices<sizeof...(CallArgs), anyCont>::type const_indices;
 				
 				this->finalizeTuning();
-				this->selectBackend(arg.size());
-					
+				//this->selectBackend(arg.size());
+
+				auto anyArgTup = args_tuple<anyCont,                     CallArgs...>::template value(any_indices, args...);
+				auto ciArgTup  = args_tuple<sizeof...(CallArgs)-anyCont, CallArgs...>::template value(const_indices, args...);
+				
+				DispatchSize targetSize {
+					arg.size(),
+					get_size(std::make_tuple(res), seq<0u>()),
+					get_size(std::make_tuple(arg), seq<0u>()),
+					get_size(anyArgTup, gen_seq<std::tuple_size<decltype(anyArgTup)>::value>()),
+					get_size(ciArgTup,  gen_seq<std::tuple_size<decltype(ciArgTup)>::value>())
+				};
+
+				std::cout << "INSERTED DATA " << std::endl;
+				for (auto& s: targetSize.outputSize) {
+					std::cout << s.x << "|" << s.y << "  ,"; 
+				}
+				std::cout << std::endl;
+
+				for (auto& s: targetSize.elwiseSize) {
+					std::cout << s.x << "|" << s.y << "  ,"; 
+				}
+				std::cout << std::endl;
+
+				for (auto& s: targetSize.containerSize) {
+					std::cout << s.x << "|" << s.y << "  ,"; 
+				}
+				std::cout << std::endl;
+				
+				for (auto& s: targetSize.uniformSize) {
+					std::cout << s.x << "|" << s.y << "  ,"; 
+				}
+				std::cout << std::endl;
+
+
+				this->selectBackend(targetSize);
+
+
+
 				switch (this->m_selected_spec->activateBackend())
 				{
 				case Backend::Type::Hybrid:
@@ -265,12 +302,36 @@ namespace skepu
 					SKEPU_ERROR("MapOverlap 1D: Non-matching container sizes");
 				
 				static constexpr size_t anyCont = std::tuple_size<typename MapOverlapFunc::ContainerArgs>::value;
-				typename make_pack_indices<anyCont, 0>::type any_indices;
+				typename make_pack_indices<anyCont, 0u>::type any_indices;
 				typename make_pack_indices<sizeof...(CallArgs), anyCont>::type const_indices;
 				
 				this->finalizeTuning();
-				this->selectBackend(arg.size());
+				//this->selectBackend(arg.size());
+				// this->selectBackend(DispatchSize::Create(
+				// 	args_tuple<sizeof...(Re), CallArgs...>::template value<EI...>(args...)
+				// 	args_tuple<sizeof...(EI), CallArgs...>::template value<EI...>(args...),
+				// 	args_tuple<sizeof...(AI), CallArgs...>::template value<AI...>(args...),
+				// 	args_tuple<sizeof...(CI), CallArgs...>::template value<CI...>(args...),
+				// 	arg.size()
+
+				// ));
+				//std::tuple_size<T>{}
 				
+				auto anyArgTup = args_tuple<anyCont,                     CallArgs...>::template value(any_indices, std::forward<CallArgs>(args)...);
+				auto ciArgTup  = args_tuple<sizeof...(CallArgs)-anyCont, CallArgs...>::template value(const_indices, std::forward<CallArgs>(args)...);
+				
+				DispatchSize ds {
+					arg.size(),
+					get_size(std::make_tuple(res), seq<0u>()),
+					get_size(std::make_tuple(arg), seq<0u>()),
+					get_size(anyArgTup, gen_seq<std::tuple_size<decltype(anyArgTup)>::value>()),
+					get_size(ciArgTup,  gen_seq<std::tuple_size<decltype(ciArgTup)>::value>())
+				};
+
+				this->selectBackend(ds);
+				
+
+
 				size_t numrows = arg.total_rows();
 				size_t numcols = arg.total_cols();
 					
@@ -562,8 +623,21 @@ namespace skepu
 				// End remove
 				
 				this->finalizeTuning();
-				this->selectBackend(get<0>(args...).size());
-					
+				//this->selectBackend(get<0>(args...).size());
+
+				this->selectBackend(
+					DispatchSize::Create(
+						get<0>(args...).size(),
+						args_tuple<sizeof...(OI), CallArgs...>::template value<OI...>(args...),
+						args_tuple<sizeof...(EI), CallArgs...>::template value<EI...>(args...),
+						args_tuple<sizeof...(AI), CallArgs...>::template value<AI...>(args...),
+						args_tuple<sizeof...(CI), CallArgs...>::template value<CI...>(args...)
+					)
+				);
+
+
+
+
 				switch (this->m_selected_spec->activateBackend())
 				{
 				case Backend::Type::Hybrid:
