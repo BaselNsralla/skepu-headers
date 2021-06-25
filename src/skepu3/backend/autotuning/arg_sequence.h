@@ -226,7 +226,7 @@ namespace autotuner {
         {    
             if (restIt == input.end()) 
             {
-                        std::cout << "LOOPING " << std::endl;
+                //std::cout << "LOOPING " << std::endl;
                 samples.push_back(std::move(combo));
             } else {
                 for (auto& sizes: *restIt) 
@@ -275,9 +275,9 @@ namespace autotuner {
     template<>
     std::vector<Size> sizes2D<true>() {
         std::vector<Size> sizes;
-        for (size_t size_x{2u}; size_x < 12; ++size_x)
+        for (size_t size_x{2u}; size_x < 15; ++size_x)
         {
-            for (size_t size_y{0u}; size_y < 12; ++size_y)
+            for (size_t size_y{0u}; size_y < 15; ++size_y)
             {
                 sizes.push_back({size_x, size_y});
             }   
@@ -288,7 +288,7 @@ namespace autotuner {
     template<>
     std::vector<Size> sizes2D<false>() {
         std::vector<Size> sizes;
-        for (size_t size_x{2u}; size_x < 12; ++size_x)
+        for (size_t size_x{2u}; size_x < 15; ++size_x)
         {
             sizes.push_back({size_x, size_x});
         }
@@ -387,6 +387,19 @@ namespace autotuner {
         ArgCatPerm perm;
         context { (perm.add(arg_combinations(T(), false)), 0)... }; //assert all are of same container (Standard)
         perm.permutations(Mechanism::SYMETRIC);
+        for (auto& a: perm.permutation_sequence) {
+            std::cout << "{ ";
+            for(auto& b: a) { // Arg permutations
+                std::cout << " { ";
+                for(auto& c: b) {
+                    std::cout << c.x << "|" << c.y << ", ";
+                }
+                std::cout << "}";
+            }
+            std::cout << " } \n";
+        }
+
+
         return perm;
     }
 
@@ -395,7 +408,7 @@ namespace autotuner {
         ArgCatPerm perm;
         context { (perm.add(arg_combinations(T(), true)), 0) }; 
         perm.permutations();
-        std::cout << "CATEGORT:: \n";
+        std::cout << "CATEGORY:: \n";
         
         // Det här make:ar sense
         for (auto& a: perm.input) {
@@ -461,20 +474,22 @@ namespace autotuner {
             >()
         );
 
-
-        std::cout << "DONE SAMPLING " << argSeq.input.size() << std::endl;
-        for (auto& a: argSeq.samples) { // En hel sample för varje element
-            std::cout << "{" << std::endl;
-            for (auto& b: a) { // En hel variabel Input, output, uniform och gänget 
-                std::cout << "    {" << std::endl;
-                std::cout << "\t";
+        std::ofstream ostrm("olllllkk.json", std::ios::trunc);
+        ostrm << "DONE SAMPLING " << argSeq.input.size() << std::endl;
+        for (auto& a: argSeq.samples) 
+        { // En hel sample för varje element
+            ostrm << "{" << std::endl;
+            for (auto& b: a) 
+            { // En hel variabel Input, output, uniform och gänget 
+                ostrm << "    {" << std::endl;
+                ostrm<< "\t";
                 for (auto& c: b)  // Size?
                 {
-                    std::cout << c.x << ", ";
+                 ostrm << c.x <<  "·|·" << c.y << ", ";
                 }
-                std::cout << "\n    }" << std::endl;
+            ostrm << "\n    }" << std::endl;
             } 
-            std::cout << "} \n" << std::endl;
+            ostrm << "} \n" << std::endl;
         }
         return argSeq;
     }
