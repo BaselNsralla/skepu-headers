@@ -62,9 +62,11 @@ namespace autotuner
                         std::get<OI>(args.resultArg)...,
                         std::get<EI>(args.elwiseArg)...,
                         std::get<CI>(args.containerArg)...);
+
+                   
                 }); 
 
-            
+            sampler.cleanup();
             /// TODOD NEXT
             //std::cout << "BEST BACKEND IS " << bestDuration.first << " FOR SIZE " << base2Pow(ResSize) << std::endl;
             plan.insert(SizeModel(bestDuration.first, bestDuration.second.count(), data));

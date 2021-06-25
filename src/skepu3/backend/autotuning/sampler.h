@@ -248,6 +248,9 @@ namespace autotuner
                 skeleton.setEdgeMode(skepu::Edge::Duplicate); // NOTE!! kräver det ingen padding då?
             }
 
+            void cleanup() {
+                skeleton.setEdgeMode(skepu::Edge::None);
+            }
 
             template<size_t... OI, size_t... EI, size_t... CI, size_t... UI>
             SampledArgs<ResultWrapped, ElwiseWrapped, ContainerWrapped, UniformWrapped> 
@@ -400,6 +403,7 @@ namespace autotuner
             //     */
             // }
 
+            void cleanup() {}
 
             template<size_t... OI, size_t... EI, size_t... CI, size_t... UI>
             SampledArgs<ResultWrapped, ElwiseWrapped, ContainerWrapped, UniformWrapped> 
