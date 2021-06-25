@@ -27,7 +27,7 @@ namespace autotuner
         void run(SampleVec& data, std::vector<BackendSpec>& specs, ExecutionPlan& plan) {
             
             std::pair<Backend::Type, benchmark::TimeSpan> bestDuration{Backend::Type::CPU, benchmark::TimeSpan::max()};
-            
+            std::cout << data.size() << std::endl;
             auto args = sampler.sample(
                         data,
                         pack_indices<OI...>(), 
@@ -57,6 +57,11 @@ namespace autotuner
                         std::cout << "Change from " << bestDuration.first << " To " << backend << std::endl;
                         bestDuration = {backend, duration};
                     }
+
+                    skepu::containerutils::updateHostAndInvalidateDevice(
+                        std::get<OI>(args.resultArg)...,
+                        std::get<EI>(args.elwiseArg)...,
+                        std::get<CI>(args.containerArg)...);
                 }); 
 
             
@@ -85,9 +90,9 @@ namespace autotuner
 
             //FÖR VARJE I Is... kör run => run kör sample och benchmark och vi får resultat in i
             //en plan variabel som skapas i konstruktorn här
-            
+            std::cout << "AMOUNT OF SAMPLES :" << allSamples.size() << std::endl;
             for (auto& sample: allSamples) 
-            {
+            {   std::cout << "RUNNING SAMPLE ROUND! " << std::endl;
                 run(sample, specs, plan);
             }
             
