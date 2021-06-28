@@ -7,7 +7,7 @@
 
 #include "skepu3/impl/region.hpp"
 #include "skepu3/backend/autotuning/tuneable.h"
-using namespace autotuner;
+using namespace autotune;
 
 namespace skepu
 {
@@ -594,7 +594,24 @@ namespace skepu
 			void helper_Hybrid(pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args);
 			
 #endif
-			
+
+
+		// inline void prt()
+		// {
+
+		// }
+
+		// template<typename First, typename... Rest>
+		// inline void prt(First&& first, Rest&&... rest)
+		// {
+		// 	std::cout << first << " ";
+		// }
+		
+		void prt(size_t size ) {
+			std::cout << size << " ";
+		}
+
+		 using context = std::initializer_list<int>;
 		public:
 			template<size_t... OI, size_t... EI, size_t... AI, size_t... CI, typename... CallArgs>
 			auto backendDispatch(pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args) -> decltype(get<0>(args...))
@@ -609,14 +626,26 @@ namespace skepu
 				
 				if (this->m_edge != Edge::None && disjunction(
 					(get<EI>(args...).size_i() != size_i) &&
-					(get<EI>(args...).size_j() != size_j) ...))
-					SKEPU_ERROR("Non-matching input container sizes");
+					(get<EI>(args...).size_j() != size_j) ...)){
+						context{ (prt(get<EI>(args...).size_i()),0)... }; 
+						std::cout << "!= " << size_i << std::endl;
+						context{ (prt(get<EI>(args...).size_j()),0)... }; 
+						std::cout  << "!= " << size_j << std::endl;
+			
+						SKEPU_ERROR("Non-matching input container sizes");
+
+					}
 				
 				if (this->m_edge == Edge::None && disjunction(
 					(get<EI>(args...).size_i() - this->m_overlap_y*2 != size_i) &&
 					(get<EI>(args...).size_j() - this->m_overlap_x*2 != size_j) ...))
 					SKEPU_ERROR("Non-matching input container sizes");
 				
+				//std::cout << get<EI>(args...).size_i() << " != " << size_i << std::endl;
+				//std::cout << get<EI>(args...).size_j() << " != " << size_j << std::endl;
+			
+			
+			
 				// Remove later
 				auto &res = get<0>(args...);
 				auto &arg = get<outArity>(args...);

@@ -49,62 +49,65 @@
         - Set on thread exit.
         - Cleanup
 */
-using namespace skepu;
-using namespace skepu::backend;
-using namespace autotuner::helpers;
-using namespace autotuner::sample;
+
+using namespace skepu::backend::autotune::sampler;
 using std::tuple;
 
-
-namespace autotuner
-{   
-    
-    // ======================= Autotuning ========================================================
-    template<typename Skeleton>
-    using isMapOverlap = typename std::integral_constant<bool, Skeleton::skeletonType == SkeletonType::MapOverlap2D>;
-
-    template<typename Skeleton> // binary specialization, would need an extension to nonbinary
-    using ConditionalSampler = typename std::conditional<isMapOverlap<Skeleton>::value, MapOverlapSampler<Skeleton>, ASampler<Skeleton>>::type;
-
-    template<typename Skeleton, size_t... OI, size_t... EI, size_t... CI, size_t... UI>
-    ExecutionPlan sampling(Skeleton& skeleton, pack_indices<OI...> oi, pack_indices<EI...> ei, pack_indices<CI...> ci, pack_indices<UI...> ui) 
+namespace skepu 
+{
+    namespace backend 
     {
-       
-        std::cout << "....." << std::endl;
-        print_index<OI...>::print();
-        print_index<EI...>::print();
-        print_index<CI...>::print();
-        print_index<UI...>::print();
-        std::cout << "OI, EI, CI, UI" << std::endl;
+        namespace autotune
+        {   
+            
+            // ======================= Autotuning ========================================================
+            template<typename Skeleton>
+            using isMapOverlap = typename std::integral_constant<bool, Skeleton::skeletonType == SkeletonType::MapOverlap2D>;
 
-        std::cout << "##### MAX SIZE: " << ConditionalSampler<Skeleton>::max_sample << std::endl;
-        std::cout << "##### PREFERS MATRIX: " << Skeleton::prefers_matrix << std::endl;
-        
-        using SRT = ConditionalSampler<Skeleton>;//Sampler<Skeleton>;
+            template<typename Skeleton> // binary specialization, would need an extension to nonbinary
+            using ConditionalSampler = typename std::conditional<isMapOverlap<Skeleton>::value, MapOverlapSampler<Skeleton>, ASampler<Skeleton>>::type;
 
-        SampleRunner<
-            SRT, 
-            pack_indices<OI...>, 
-            pack_indices<EI...>, 
-            pack_indices<CI...>, 
-            pack_indices<UI...>> runner{SRT(skeleton)};
+            template<typename Skeleton, size_t... OI, size_t... EI, size_t... CI, size_t... UI>
+            ExecutionPlan sampling(Skeleton& skeleton, pack_indices<OI...> oi, pack_indices<EI...> ei, pack_indices<CI...> ci, pack_indices<UI...> ui) 
+            {
+            
+                std::cout << "....." << std::endl;
+                print_index<OI...>::print();
+                print_index<EI...>::print();
+                print_index<CI...>::print();
+                print_index<UI...>::print();
+                std::cout << "OI, EI, CI, UI" << std::endl;
+
+                std::cout << "##### MAX SIZE: " << ConditionalSampler<Skeleton>::max_sample << std::endl;
+                std::cout << "##### PREFERS MATRIX: " << Skeleton::prefers_matrix << std::endl;
                 
-        auto plan = runner.start();//(argSeq.samples);
-        std::cout << "SAMPLING IS DONE!!!" << std::endl;
-        return plan;
-    }
+                using SRT = ConditionalSampler<Skeleton>;//Sampler<Skeleton>;
 
-    template<typename Skeleton>
-    ExecutionPlan samplingWrapper(Skeleton&  skeleton) {
-        return sampling(
-            skeleton,
-            typename make_pack_indices<std::tuple_size<typename Skeleton::ResultArg>::value>::type(),
-            typename make_pack_indices<std::tuple_size<typename Skeleton::ElwiseArgs>::value>::type(),
-            typename make_pack_indices<std::tuple_size<typename Skeleton::ContainerArgs>::value>::type(),
-            typename make_pack_indices<std::tuple_size<typename Skeleton::UniformArgs>::value>::type()
-        );
-    }
+                SampleRunner<
+                    SRT, 
+                    pack_indices<OI...>, 
+                    pack_indices<EI...>, 
+                    pack_indices<CI...>, 
+                    pack_indices<UI...>> runner{SRT(skeleton)};
+                        
+                auto plan = runner.start();//(argSeq.samples);
+                std::cout << "SAMPLING IS DONE!!!" << std::endl;
+                return plan;
+            }
 
-} // namespace autotuner
+            template<typename Skeleton>
+            ExecutionPlan samplingWrapper(Skeleton&  skeleton) {
+                return sampling(
+                    skeleton,
+                    typename make_pack_indices<std::tuple_size<typename Skeleton::ResultArg>::value>::type(),
+                    typename make_pack_indices<std::tuple_size<typename Skeleton::ElwiseArgs>::value>::type(),
+                    typename make_pack_indices<std::tuple_size<typename Skeleton::ContainerArgs>::value>::type(),
+                    typename make_pack_indices<std::tuple_size<typename Skeleton::UniformArgs>::value>::type()
+                );
+            }
+
+        } // namespace autotune
+    }
+}
 
 #endif

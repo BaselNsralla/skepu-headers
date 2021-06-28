@@ -6,7 +6,7 @@
 #define MAPPAIRS_H
 
 #include "skepu3/backend/autotuning/tuneable.h"
-using namespace autotuner;
+using namespace autotune;
 
 namespace skepu
 {

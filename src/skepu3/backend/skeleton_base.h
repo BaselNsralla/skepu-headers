@@ -9,7 +9,7 @@
 #include <skepu3/backend/environment.h>
 #include <skepu3/backend/autotuning/execution_plan.h>
 #include <skepu3/backend/autotuning/size.h>
-#include <skepu3/backend/dispatch_size.h>
+#include <skepu3/backend/autotuning/dispatch_size.h>
 
 namespace skepu
 {
@@ -33,7 +33,7 @@ namespace skepu
 				this->m_execPlan = plan;
 			}
 
-			void setTuneExecPlan(autotuner::ExecutionPlan* plan) 
+			void setTuneExecPlan(autotune::ExecutionPlan* plan) 
 			{
 				if (this->m_tunePlan != nullptr)
 					delete this->m_tunePlan;
@@ -73,7 +73,7 @@ namespace skepu
 				return *this->m_selected_spec;
 			}
 			
-			const BackendSpec& selectBackend(DispatchSize size)
+			const BackendSpec& selectBackend(autotune::DispatchSize size)
 			{
 
 				if  (this->m_tunePlan) {//this->m_tunePlan) {
@@ -135,7 +135,7 @@ namespace skepu
 			/*! this is the pointer to execution plan that is active and should be used by implementations to check numOmpThreads and cudaBlocks etc. */
 			ExecPlan *m_execPlan = nullptr;
 			
-			autotuner::ExecutionPlan* m_tunePlan = nullptr;
+			autotune::ExecutionPlan* m_tunePlan = nullptr;
 
 			const BackendSpec *m_user_spec = nullptr;
 			
