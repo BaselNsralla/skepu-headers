@@ -6,6 +6,7 @@
 #include <skepu3/backend/autotuning/execution_plan.h>
 #include <skepu3/backend/autotuning/size.h>
 #include <functional>
+#include <skepu3/backend/autotuning/tune_range.h>
 
 namespace skepu
 {
@@ -72,20 +73,27 @@ namespace skepu
 			template<typename T>
 			AT::Size get_size_impl(skepu::Matrix<T> p,  AltSizeFunc altSize) 
 			{
-				return AT::Size{ulog2(p.size_i()), ulog2(p.size_j())};
+				return AT::Size
+					{
+						std::min(ulog2(p.size_i()), MULTI_DIM), 
+						std::min(ulog2(p.size_j()), MULTI_DIM)
+					};
 			}
 
 			template<typename T>
 			AT::Size get_size_impl(skepu::Vector<T> p,  AltSizeFunc altSize) 
 			{
-				return AT::Size{ulog2(p.size()), 0u};
+				return AT::Size 
+					{
+						std::min(ulog2(p.size()), SINGLE_DIM), 0u
+					};
 			}
 			
 			// TODO: Hantera flera typer här
 			template<typename T>
 			AT::Size get_size_impl(T p,  AltSizeFunc altSize) 
 			{
-				return AT::Size{ulog2(p), 0u};
+				return AT::Size{std::min(ulog2(p), SINGLE_DIM), 0u}; // TODO: COULD CAUSE BUGS?
 			}
 			
 			template<typename T>
@@ -130,7 +138,7 @@ namespace skepu
 								std::tuple<Uni...> uniArg) 
 				{
 					auto altSize = [&essentialSize]() { return AT::Size{ulog2(essentialSize), 0}; };
-					
+
 					auto d = DispatchSize {
 						essentialSize,
 						get_size(resArg,  gen_seq<sizeof...(Res)>(),  altSize), 
