@@ -484,30 +484,78 @@ namespace skepu
                 return seq;
             }   
 
+            
+            template<SkeletonType type>
+            struct generate_sequence_impl {
+                
+                template<size_t... ret, size_t... elwise, size_t... cont, size_t... uni>
+                static ArgSequence generate( 
+                                        Dimensions<ret...>, 
+                                        Dimensions<elwise...>,
+                                        Dimensions<cont...>,
+                                        Dimensions<uni...>) 
+                {   
+                    LOG(INFO) << "Generating all argument sequences..." << std::endl;
+                    ArgSequence argSeq = configured_sequence(
+                        Permutation<
+                            //Single<Ultra<typename Skeleton::ResultArg>>,
+                            //Single<Ultra<typename Skeleton::ElwiseArgs>>,
+                            //Single<Standard<typename Skeleton::ResultArg>>,
+                            //Single<Standard<typename Skeleton::ElwiseArgs>>,
+                            Group<Standard<Dimensions<ret...>>, Standard<Dimensions<elwise...>>>,
+                            Single<Ultra<Dimensions<cont...>>>,
+                            Single<Ultra<Dimensions<uni...>>>
+                        >()
+                    );
+                    LOG(INFO) << "Sequence generation DONE!" << std::endl;
+                    return argSeq;
+                }
+            };
+
+            struct reduce_sequence 
+            {
+                template<size_t... ret, size_t... elwise, size_t... cont, size_t... uni>
+                static ArgSequence generate( 
+                                        Dimensions<ret...>, 
+                                        Dimensions<elwise...>,
+                                        Dimensions<cont...>,
+                                        Dimensions<uni...>) 
+                {   
+                    LOG(INFO) << "Generating all argument sequences..." << std::endl;
+                    ArgSequence argSeq = configured_sequence(
+                        Permutation<
+                            Single<Standard<Dimensions<ret...>>>,
+                            Single<Standard<Dimensions<elwise...>>>,
+                            Single<Ultra<Dimensions<cont...>>>,
+                            Single<Ultra<Dimensions<uni...>>>
+                        >()
+                    );
+                    LOG(INFO) << "Sequence generation DONE!" << std::endl;
+                    return argSeq;
+                }
+            };
+
+            template<>
+            struct generate_sequence_impl<SkeletonType::Reduce1D> : reduce_sequence
+            {};
+
+
+            template<>
+            struct generate_sequence_impl<SkeletonType::Reduce2D>: reduce_sequence 
+            {};
+
 
             template<typename Skeleton, size_t... ret, size_t... elwise, size_t... cont, size_t... uni>
             ArgSequence generate_sequence(Skeleton& skeleton, 
-                                         Dimensions<ret...>, 
-                                         Dimensions<elwise...>,
-                                         Dimensions<cont...>,
-                                         Dimensions<uni...>) {
+                                         Dimensions<ret...> r, 
+                                         Dimensions<elwise...> e,
+                                         Dimensions<cont...> c,
+                                         Dimensions<uni...> u) {
                 //Group<Standard<typename Skeleton::ResultArg>, Standard< typename Skeleton::ElwiseArgs>>,
                 
-                LOG(INFO) << "Generating all argument sequences..." << std::endl;
-                ArgSequence argSeq = configured_sequence(
-                    Permutation<
-                        //Single<Ultra<typename Skeleton::ResultArg>>,
-                        //Single<Ultra<typename Skeleton::ElwiseArgs>>,
-                        //Single<Standard<typename Skeleton::ResultArg>>,
-                        //Single<Standard<typename Skeleton::ElwiseArgs>>,
-                        Group<Standard<Dimensions<ret...>>, Standard<Dimensions<elwise...>>>,
-                        Single<Ultra<Dimensions<cont...>>>,
-                        Single<Ultra<Dimensions<uni...>>>
-                    >()
-                );
-                LOG(INFO) << "Sequence generation DONE!" << std::endl;
+                ArgSequence argSeq = generate_sequence_impl<Skeleton::skeletonType>::generate(r, e, c, u);
 
-                std::ofstream ostrm("olllllkk.json", std::ios::trunc);
+                std::ofstream ostrm("sequences.json", std::ios::trunc);
                 ostrm << "DONE SAMPLING " << argSeq.input.size() << std::endl;
                 for (auto& a: argSeq.samples) 
                 { // En hel sample för varje element
