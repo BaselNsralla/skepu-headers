@@ -319,7 +319,7 @@ namespace skepu
 				
 				auto anyArgTup = args_tuple<anyCont,                     CallArgs...>::template value(any_indices, std::forward<CallArgs>(args)...);
 				auto ciArgTup  = args_tuple<sizeof...(CallArgs)-anyCont, CallArgs...>::template value(const_indices, std::forward<CallArgs>(args)...);
-				
+				// TODO: Always 1D or 2D in both operator()
 				DispatchSize ds {
 					arg.size(),
 					get_size(std::make_tuple(res), seq<0u>()),
