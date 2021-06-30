@@ -61,7 +61,7 @@ struct LOG
                             << "TODO:"
                             << termcolor::reset
                             << " "
-                            << termcolor::on_bright_cyan;
+                            << termcolor::cyan;
             };
             break;
         case NOTE:
