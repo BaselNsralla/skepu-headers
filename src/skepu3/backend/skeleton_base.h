@@ -77,7 +77,6 @@ namespace skepu
 			{
 
 				if  (this->m_tunePlan) {//this->m_tunePlan) {
-					std::cout << "####### WILL TRY TO FIND TUNED BACKEND #######" << std::endl;
 					setBackend(this->m_tunePlan->optimalBackend(size));
 					this->m_selected_spec = this->m_user_spec;
 				}

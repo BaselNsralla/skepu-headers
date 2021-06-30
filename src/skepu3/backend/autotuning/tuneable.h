@@ -7,7 +7,7 @@
 #include <string>
 #include <future>
 #include <thread>
-
+#include <skepu3/backend/logging/logger.h>
 namespace skepu 
 {
     namespace backend 
@@ -88,7 +88,7 @@ namespace skepu
                     {
                         return active; // true: It is active therefore future invalidity is because of being finished (makeAvailable was called before), or false which is not available. 
                     }
-                    std::cout << "WILL WAIT "<< std::endl;
+                    LOG(INFO) << "Generating execution plan..." << std::endl;
                     skeleton.setTuneExecPlan(new ExecutionPlan(std::move(future.get()))); // TOOD: transfer ownership instead.
                     return true;
                 }

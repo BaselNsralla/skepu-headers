@@ -11,6 +11,7 @@
 #include <skepu3/external/json.hpp>
 #include <skepu3/backend/autotuning/arg_sequence.h>
 #include <skepu3/backend/autotuning/dispatch_size.h>
+#include <skepu3/backend/logging/logger.h>
 // for convenience
 using json = nlohmann::json;
 
@@ -154,7 +155,7 @@ namespace skepu
                 BackendSpec optimalBackend(DispatchSize& targetSize)
                 {
                     // NOTE: Dispatched size kommer ha samma vector size på varje argument.
-                    std::cout << "INSERTED DATA " << std::endl;
+                    LOG(INFO) << "Finding a backend for the following dispatch size format:" << std::endl;
                     for (auto& s: targetSize.outputSize) {
                         std::cout << s.x << "|" << s.y << "  ,"; 
                     }
@@ -180,10 +181,11 @@ namespace skepu
                     {
                         if(model == targetSize) 
                         {
-                            std::cout << "########### FOUND IT ###########" << std::endl;
+                            LOG(INFO) << "Backend found for dispatch size format!" << std::endl;
                             return BackendSpec(model.backend);
                         }
                     }
+                    LOG(WARN) << "Backend was not found for dispatch size format, will fallback to CPU!" << std::endl;
                     return BackendSpec(Backend::Type::CPU);
                 }
                 
@@ -194,30 +196,6 @@ namespace skepu
             };
 
             
-            /*
-                Extracts the string in between `start` and `end`
-            */
-            template<typename T>
-            T extract(istream& is, char start, char end) // specialize T is string?
-            {
-                auto extractUntill = [&] (char&& delim) -> string {
-                    string dummy;
-                    getline(is, dummy, is.widen(std::move(delim)));
-                    return dummy;
-                };
-
-                // Bypass what is before start if there is a start marker
-                if(start != '\0') { extractUntill(std::move(start)); }
-
-                T res;
-
-                string linepart = extractUntill(end == '\0' ? '\n' : end);
-
-                stringstream ios(linepart);
-                ios >> res;
-                return res;
-            }
-
             ExecutionPlan& operator>>(istream& is, ExecutionPlan& executionPlan) 
             {
                 json j;
@@ -261,7 +239,7 @@ namespace skepu
                 if(file) 
                 {
                     file << plan << std::flush;
-                    std::cout << "########### FLUSH OK: " << tuneId << std::endl;
+                    LOG(INFO) << "Sampling result flush to file " << "ID: " <<  tuneId << std::endl;
                 }
             }
 

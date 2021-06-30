@@ -10,6 +10,7 @@
 #include <skepu3/backend/autotuning/dimensional_sequence.h>
 #include <cmath>
 #include <skepu3/backend/autotuning/arg_sequence.h>
+#include <skepu3/backend/logging/logger.h>
 
 using namespace skepu;
 using namespace skepu::backend;
@@ -74,7 +75,7 @@ namespace skepu
                 */
                 template<size_t pos, typename T>
                 void sample_impl(T& a, std::vector<Size> sizes) {
-                    std::cout << "##### Fix sampling of uniform arguments #####" << std::endl;
+                    LOG(TODO) << "##### Fix sampling for uniform arguments #####" << std::endl;
                     a = base2Pow(sizes[pos].x);
                 }
                 
@@ -258,7 +259,6 @@ namespace skepu
                             pack_indices<CI...>, 
                             pack_indices<UI...>) // Vi kan få sizes här och de kommer alltid ha samma ordning, så en index_sequence här
                     {
-                        std::cout << "INEED HELKLLELLELE" << std::endl;
                         SampledArgs<ResultWrapped, ElwiseWrapped, ContainerWrapped, UniformWrapped> result;
                         
                         size_t outputSizeX = base2Pow(sample_vec[0][0].x);
@@ -282,17 +282,12 @@ namespace skepu
                         std::vector<autotune::Size> elwise_sample_vec(elwise_sample_size);
                         std::fill_n(elwise_sample_vec.begin(), elwise_sample_size, Size::Log2(padedSizeX, padedSizeY));
                         //std::generate_n(std::back_inserter(elwise_sample_vec), sample_vec[1].size(), [&padedSize]() { return padedSize; });
-                        std::cout << "JELLLLEP " << std::endl;
                         foreach::sample<OI...>(result.resultArg,    sample_vec[0]);//output_sample_vec);
                         foreach::sample<EI...>(result.elwiseArg,    sample_vec[1]);//elwise_sample_vec);
                         foreach::sample<CI...>(result.containerArg, sample_vec[2]);
                         foreach::sample<UI...>(result.uniArg,       sample_vec[3]);
 
                         setOverlap(skeleton, result.uniArg);
-                        std::cout << "HOW DOES IT LOOK LIKE:? " << std::endl;
-                        std::cout << std::tuple_size<decltype(result.uniArg)>() << std::endl;
-
-                        
                         return result;
                     }
                 };
