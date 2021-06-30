@@ -166,13 +166,34 @@ namespace skepu
 			Vector<T> &operator()(Vector<T> &res, Matrix<T>& arg)
 			{
 			//	assert(this->m_execPlan != NULL && this->m_execPlan->isCalibrated());
-				
+				using namespace autotune;
 				const size_t size = arg.size();
 				
 				// TODO: check size
 				this->finalizeTuning();
-				this->selectBackend(size);
-				
+				//this->selectBackend(size);
+				this->selectBackend(
+					DispatchSize {
+						size,
+						{Size{0, 0}},
+						{Size{size, 0}},
+						{Size{0, 0}},
+						{Size{0, 0}}
+					}
+				);
+				/*
+
+					DispatchSize::Create(
+						size,
+						args_tuple<0>::empty(),
+						args_tuple<1, Matrix<T>>::template value<0>(std::forward<Matrix<T>>(arg)),
+						args_tuple<0>::empty(),
+						args_tuple<0>::empty()
+					)
+
+				*/
+
+
 				VectorIterator<T> it = res.begin();
 				Matrix<T> &arg_tr = (this->m_mode == ReduceMode::ColWise) ? arg.transpose(*this->m_selected_spec) : arg;
 				
