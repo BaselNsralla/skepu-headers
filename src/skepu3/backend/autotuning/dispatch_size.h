@@ -14,9 +14,13 @@ namespace skepu
 	{
 		namespace autotune 
 		{
+			struct args_tuple_base 
+			{
+				static std::tuple<> empty() { return std::tuple<>(); } 
+			};
 
 			template<size_t ISize, typename... T>
-			struct args_tuple 
+			struct args_tuple : args_tuple_base
 			{
 
 				template<size_t... Is>
@@ -34,7 +38,7 @@ namespace skepu
 			}; 
 
 			template<typename... T>
-			struct args_tuple<0u, T...> 
+			struct args_tuple<0u, T...> : args_tuple_base
 			{
 
 				template<size_t... Is>
