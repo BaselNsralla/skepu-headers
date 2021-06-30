@@ -45,6 +45,7 @@ namespace skepu
 			size_t default_size_y;
 			
 		public:
+			static constexpr bool prefers_matrix = true;
 			
 			static constexpr auto skeletonType = SkeletonType::MapPairs;
 			using ResultArg = std::tuple<T>;
@@ -159,8 +160,19 @@ namespace skepu
 					SKEPU_ERROR("Non-matching horizontal container sizes");
 				
 				this->finalizeTuning();
-				this->selectBackend(Vsize + Hsize);
-				
+				//-cuda this->selectBackend(Vsize + Hsize);
+				this->selectBackend(
+					DispatchSize::Create(
+						Vsize + Hsize,
+						args_tuple<sizeof...(OI), CallArgs...>::template value<OI...>(std::forward<CallArgs>(args)...),
+						args_tuple<sizeof...(VEI) + sizeof...(HEI), CallArgs...>::template value<VEI..., HEI...>(std::forward<CallArgs>(args)...),
+						args_tuple<sizeof...(AI), CallArgs...>::template value<AI...>(std::forward<CallArgs>(args)...),
+						args_tuple<sizeof...(CI), CallArgs...>::template value<CI...>(std::forward<CallArgs>(args)...)
+					)
+				);
+
+
+
 				switch (this->m_selected_spec->activateBackend())
 				{
 				case Backend::Type::Hybrid:

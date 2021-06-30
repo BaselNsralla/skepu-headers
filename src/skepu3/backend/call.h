@@ -117,8 +117,18 @@ namespace skepu
 			{
 			//	assert(this->m_execPlan != NULL && this->m_execPlan->isCalibrated());
 				this->finalizeTuning();
-				this->selectBackend(0);
-				
+				//this->selectBackend(0);
+					
+				this->selectBackend(
+					DispatchSize::Create(
+						0,
+						args_tuple<0, CallArgs...>::empty(),
+						args_tuple<0, CallArgs...>::empty(),
+						args_tuple<sizeof...(AI), CallArgs...>::template value<AI...>(std::forward<CallArgs>(args)...),
+						args_tuple<sizeof...(CI), CallArgs...>::template value<CI...>(std::forward<CallArgs>(args)...)
+					)
+				);
+
 				switch (this->m_selected_spec->activateBackend())
 				{
 				case Backend::Type::CUDA:
