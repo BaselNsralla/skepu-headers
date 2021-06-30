@@ -179,6 +179,19 @@ namespace skepu
         using uni_dim    = typename deduced_dimensionality<typename Skeleton::UniformArgs>::type; 
     };
 
+    struct ArgDimReduce 
+    {
+        using ret_dim    = Dimensions<>;//typename master_deduced_dimensionality<typename Skeleton::ResultArg, typename Skeleton::ElwiseArgs>::type; // TODO: This could make it slower  if elwise is bigger than return args
+        using elwise_dim = Dimensions<1>;//typename deduced_dimensionality<typename Skeleton::ElwiseArgs>::type; 
+        using cont_dim   = Dimensions<>;//typename deduced_dimensionality<typename Skeleton::ContainerArgs>::type; 
+        using uni_dim    = Dimensions<>;//typename deduced_dimensionality<typename Skeleton::UniformArgs>::type; 
+    };
+
+    template<typename Skeleton>
+    struct ArgDim<Skeleton, SkeletonType::Reduce1D>: ArgDimReduce {};
+
+    template<typename Skeleton>
+    struct ArgDim<Skeleton, SkeletonType::Reduce2D>: ArgDimReduce {};
 
     template<typename Skeleton>
     struct ArgDimInit
