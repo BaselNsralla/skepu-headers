@@ -79,17 +79,20 @@ namespace skepu
 
 
                 template<typename T>
-                struct Dimension {
+                struct dimension 
+                {
                     static const size_t value = 0;
                 };
 
                 template<typename T>
-                struct Dimension<skepu::Matrix<T>> {
+                struct dimension<skepu::Matrix<T>> 
+                {
                     static const size_t value = 2;
                 };
 
                 template<typename T>
-                struct Dimension<skepu::Vector<T>> {
+                struct dimension<skepu::Vector<T>> 
+                {
                     static const size_t value = 1;
                 };
 
@@ -101,7 +104,7 @@ namespace skepu
                 template<typename... Types>
                 struct highest_dimension<std::tuple<Types...>>
                 {   
-                    static const size_t value = max<Dimension<typename std::decay<Types>::type>::value...>::value;
+                    static const size_t value = max<dimension<typename std::decay<Types>::type>::value...>::value;
                 };
 
             }

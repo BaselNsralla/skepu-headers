@@ -9,14 +9,14 @@
 #include <cmath>        // std::pow
 #include <fstream>
 #include <skepu3/impl/common.hpp>
-//#include <skepu3/backend/autotuning/execution_plan.h>
+
 #include <skepu3/backend/autotuning/helpers.h>
 #include <skepu3/backend/autotuning/size.h>
-//#include <skepu3/backend/autotuning/sampler.h>
-//#include <skepu3/backend/autotuning/sample_runner.h>
 
+#include <skepu3/backend/logging/logger.h>
 #include <skepu3/backend/autotuning/tune_range.h>
-
+#include <skepu3/impl/region.hpp>
+#include <skepu3/backend/autotuning/arg_dimension.h>
 namespace skepu 
 {
     namespace backend 
@@ -287,7 +287,7 @@ namespace skepu
             template<>
             std::vector<Size> sizes2D<false>() {
                 std::vector<Size> sizes;
-                for (size_t size_x{2u}; size_x < MULTI_DIM; ++size_x)
+                for (size_t size_x{1u}; size_x < MULTI_DIM; ++size_x)
                 {
                     sizes.push_back({size_x, size_x});
                 }
@@ -297,41 +297,67 @@ namespace skepu
 
             std::vector<Size> sizes1D() {
                 std::vector<Size> sizes;
-                for (size_t size_x{2u}; size_x < SINGLE_DIM; ++size_x)
+                for (size_t size_x{1u}; size_x < SINGLE_DIM; ++size_x)
                 {
                     sizes.push_back({size_x, 0});
                 }
                 return sizes;
             }
 
-            // std::array istället?
-            template<bool tuneFactor, typename T>
-            std::vector<Size> combinations(T) 
-            {
-                return sizes1D();
-            }
+            // // std::array istället?
+            // template<bool tuneFactor, typename T>
+            // std::vector<Size> combinations(T) 
+            // {   
+            //     std::cout << typeid(T).name() << std::endl;
+            //     return sizes1D();
+            // }
 
-            // std::array istället?
-            template<bool tuneFactor, typename T>
-            std::vector<Size> combinations(skepu::MatCol<T>) 
-            {
-                return sizes2D<tuneFactor>();
-            }
+            // // std::array istället?
+            // template<bool tuneFactor, typename T>
+            // std::vector<Size> combinations(skepu::MatCol<T>) 
+            // {
+            //     return sizes2D<tuneFactor>();
+            // }
 
-            // std::array istället?
-            template<bool tuneFactor, typename T>
-            std::vector<Size> combinations(skepu::MatRow<T>) 
-            {
-                return sizes2D<tuneFactor>();
-            }
+            // // std::array istället?
+            // template<bool tuneFactor, typename T>
+            // std::vector<Size> combinations(skepu::MatRow<T>) 
+            // {
+            //     return sizes2D<tuneFactor>();
+            // }
 
-            // std::array istället?
-            template<bool tuneFactor, typename T>
-            std::vector<Size> combinations(skepu::Mat<T>) 
-            {
-                return sizes2D<tuneFactor>();
-            }
+            // // std::array istället?
+            // template<bool tuneFactor, typename T>
+            // std::vector<Size> combinations(skepu::Mat<T>) 
+            // {
+            //     return sizes2D<tuneFactor>();
+            // }
 
+            // // std::array istället?
+            // template<bool tuneFactor, typename T>
+            // std::vector<Size> combinations(skepu::Region2D<T>) 
+            // {
+            //     return sizes2D<tuneFactor>();
+            // }
+
+
+            template<bool tuneFactor, size_t dimensionality>
+            std::vector<Size> combinations() 
+            {   
+                switch (dimensionality)
+                {
+                case 1u:
+                    return sizes1D();
+                    break;
+                case 2u:
+                    return sizes2D<tuneFactor>();                
+                    break;
+                default:
+                    return sizes1D();
+                    break;
+                }
+                 
+            }
 
             ArgPerm empty_arg_combinations() {
                 ArgPerm argSize;
@@ -340,28 +366,28 @@ namespace skepu
                 return argSize;
             }
 
-            ArgPerm arg_combinations(Ultra<tuple<>>, bool permutate) {
+            ArgPerm arg_combinations(Ultra<Dimensions<>>, bool permutate) {
                 return empty_arg_combinations();
             }
 
-            ArgPerm arg_combinations(Standard<tuple<>>, bool permutate) {
+            ArgPerm arg_combinations(Standard<Dimensions<>>, bool permutate) {
                 return empty_arg_combinations();
             }
 
-            template<typename... Types>
-            ArgPerm arg_combinations(Ultra<tuple<Types...>>, bool permutate) {
+            template<size_t... Sizes>
+            ArgPerm arg_combinations(Ultra<Dimensions<Sizes...>>, bool permutate) {
                 //size_t size = sizeof...(Types);
                 ArgPerm argSize;
-                context { (argSize.add(combinations<true>(Types())), 0)... };
+                context { (argSize.add(combinations<true, Sizes>()), 0)... };
                 argSize.permutations(permutate ? Mechanism::ALL : Mechanism::SYMETRIC);
                 return argSize;
             };
 
-            template<typename... Types>
-            ArgPerm arg_combinations(Standard<tuple<Types...>>, bool permutate) {
+            template<size_t... Sizes>
+            ArgPerm arg_combinations(Standard<Dimensions<Sizes...>>, bool permutate) {
                 //size_t size = sizeof...(Types);
                 ArgPerm argSize;
-                context { (argSize.add(combinations<false>(Types())), 0)... };
+                context { (argSize.add(combinations<false, Sizes>()), 0)... };
                 argSize.permutations(permutate ? Mechanism::ALL : Mechanism::SYMETRIC);
                 return argSize;
             };
@@ -386,17 +412,17 @@ namespace skepu
                 ArgCatPerm perm;
                 context { (perm.add(arg_combinations(T(), false)), 0)... }; //assert all are of same container (Standard)
                 perm.permutations(Mechanism::SYMETRIC);
-                for (auto& a: perm.permutation_sequence) {
-                    std::cout << "{ ";
-                    for(auto& b: a) { // Arg permutations
-                        std::cout << " { ";
-                        for(auto& c: b) {
-                            std::cout << c.x << "|" << c.y << ", ";
-                        }
-                        std::cout << "}";
-                    }
-                    std::cout << " } \n";
-                }
+                // for (auto& a: perm.permutation_sequence) {
+                //     std::cout << "{ ";
+                //     for(auto& b: a) { // Arg permutations
+                //         std::cout << " { ";
+                //         for(auto& c: b) {
+                //             std::cout << c.x << "|" << c.y << ", ";
+                //         }
+                //         std::cout << "}";
+                //     }
+                //     std::cout << " } \n";
+                // }
 
 
                 return perm;
@@ -407,20 +433,20 @@ namespace skepu
                 ArgCatPerm perm;
                 context { (perm.add(arg_combinations(T(), true)), 0) }; 
                 perm.permutations();
-                std::cout << "CATEGORY:: \n";
+                // std::cout << "CATEGORY:: \n";
                 
-                // Det här make:ar sense
-                for (auto& a: perm.input) {
-                    std::cout << "{ ";
-                    for(auto& b: a) { // Arg permutations
-                        std::cout << " { ";
-                        for(auto& c: b) {
-                            std::cout << c.x << "|" << c.y << ", ";
-                        }
-                        std::cout << "}";
-                    }
-                    std::cout << " } \n";
-                }
+                // // Det här make:ar sense
+                // for (auto& a: perm.input) {
+                //     std::cout << "{ ";
+                //     for(auto& b: a) { // Arg permutations
+                //         std::cout << " { ";
+                //         for(auto& c: b) {
+                //             std::cout << c.x << "|" << c.y << ", ";
+                //         }
+                //         std::cout << "}";
+                //     }
+                //     std::cout << " } \n";
+                // }
 
                 return perm;
             }
@@ -459,19 +485,27 @@ namespace skepu
             }   
 
 
-            template<typename Skeleton>
-            ArgSequence generate_sequence(Skeleton& skeleton) {
+            template<typename Skeleton, size_t... ret, size_t... elwise, size_t... cont, size_t... uni>
+            ArgSequence generate_sequence(Skeleton& skeleton, 
+                                         Dimensions<ret...>, 
+                                         Dimensions<elwise...>,
+                                         Dimensions<cont...>,
+                                         Dimensions<uni...>) {
                 //Group<Standard<typename Skeleton::ResultArg>, Standard< typename Skeleton::ElwiseArgs>>,
                 
+                LOG(INFO) << "Generating all argument sequences..." << std::endl;
                 ArgSequence argSeq = configured_sequence(
                     Permutation<
                         //Single<Ultra<typename Skeleton::ResultArg>>,
                         //Single<Ultra<typename Skeleton::ElwiseArgs>>,
-                        Group<Standard<typename Skeleton::ResultArg>, Standard< typename Skeleton::ElwiseArgs>>,
-                        Single<Ultra<typename Skeleton::ContainerArgs>>,
-                        Single<Ultra<typename Skeleton::UniformArgs>>
+                        //Single<Standard<typename Skeleton::ResultArg>>,
+                        //Single<Standard<typename Skeleton::ElwiseArgs>>,
+                        Group<Standard<Dimensions<ret...>>, Standard<Dimensions<elwise...>>>,
+                        Single<Ultra<Dimensions<cont...>>>,
+                        Single<Ultra<Dimensions<uni...>>>
                     >()
                 );
+                LOG(INFO) << "Sequence generation DONE!" << std::endl;
 
                 std::ofstream ostrm("olllllkk.json", std::ios::trunc);
                 ostrm << "DONE SAMPLING " << argSeq.input.size() << std::endl;
@@ -484,7 +518,7 @@ namespace skepu
                         ostrm<< "\t";
                         for (auto& c: b)  // Size?
                         {
-                        ostrm << c.x <<  "·|·" << c.y << ", ";
+                        ostrm << c.x <<  "|" << c.y << ", ";
                         }
                     ostrm << "\n    }" << std::endl;
                     } 

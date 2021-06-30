@@ -9,6 +9,7 @@
 #include <skepu3/backend/autotuning/helpers.h>
 #include <skepu3/backend/autotuning/sampler.h>
 #include <skepu3/backend/autotuning/arg_sequence.h>
+#include <skepu3/backend/logging/logger.h>
 
 #define STRINGIFY_(x) #x
 #define STRINGIFY(x) STRINGIFY_(x)
@@ -31,7 +32,7 @@ namespace skepu
                 void run(SampleVec& data, std::vector<BackendSpec>& specs, ExecutionPlan& plan) {
                     
                     std::pair<Backend::Type, benchmark::TimeSpan> bestDuration{Backend::Type::CPU, benchmark::TimeSpan::max()};
-                    std::cout << data.size() << std::endl;
+                    LOG(INFO) << "Argument category size should be four: " << data.size() << std::endl;
                     auto args = sampler.sample(
                                 data,
                                 pack_indices<OI...>(), 
@@ -58,7 +59,7 @@ namespace skepu
                             //(std::cout << "Median " << backend << " Took " << duration.count() << std::endl;
                             if (duration < bestDuration.second) // && bestDuration.first != backend
                             {
-                                std::cout << "Change from " << bestDuration.first << " To " << backend << std::endl;
+                                //std::cout << "Change from " << bestDuration.first << " To " << backend << std::endl;
                                 bestDuration = {backend, duration};
                             }
 
@@ -76,6 +77,7 @@ namespace skepu
                     plan.insert(SizeModel(bestDuration.first, bestDuration.second.count(), data));
                 }
 
+                template<class ArgDimType>
                 ExecutionPlan start() {
                     auto backendTypes = Backend::availableTypes();
 
@@ -91,17 +93,24 @@ namespace skepu
                         return plan;
                     }
                     
-                    auto allSamples = generate_sequence(sampler.skeleton).samples;
+                    auto allSamples = generate_sequence(sampler.skeleton, 
+                                                        typename ArgDimType::ret_dim(),
+                                                        typename ArgDimType::elwise_dim(),
+                                                        typename ArgDimType::cont_dim(),
+                                                        typename ArgDimType::uni_dim()
+                                                        ).samples;
 
                     //FÖR VARJE I Is... kör run => run kör sample och benchmark och vi får resultat in i
                     //en plan variabel som skapas i konstruktorn här
-                    std::cout << "AMOUNT OF SAMPLES :" << allSamples.size() << std::endl;
+                    //std::cout << "AMOUNT OF SAMPLES :" << allSamples.size() << std::endl;
+                    size_t i = 1;
                     for (auto& sample: allSamples) 
-                    {   std::cout << "RUNNING SAMPLE ROUND! " << std::endl;
+                    {   
+                        LOG(INFO) << "Runinng a sample from generated samples " << "#" << i << std::endl;
                         run(sample, specs, plan);
+                        ++i;
                     }
-                    
-                    std::cout << sampler.skeleton.tuneId << " ------ " << std::endl;
+            
                     ExecutionPlan::persist(plan, sampler.skeleton.tuneId);
                     return plan;
                 }

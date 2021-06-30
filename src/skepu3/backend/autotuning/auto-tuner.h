@@ -15,43 +15,27 @@
 #include <skepu3/backend/autotuning/sampler.h>
 #include <skepu3/backend/autotuning/sample_runner.h>
 #include <skepu3/backend/autotuning/arg_sequence.h>
+#include <skepu3/backend/logging/logger.h>
+#include <skepu3/backend/autotuning/arg_dimension.h>
 
-//#include <skepu3/backend/map.h>
-//#include <skepu3/backend/mapoverlap.h> Skapara problem
-
-/*
-    TODO: 
-        Se till att prefered container är rätt
-        Se till att alla skeletons funkar med autotuning
-        Se till att kunna använda autotune som backend
-        Kolla hur vi kan göra för ta bort och lägga till execution plan 
-        Kolla hur vi kan göra för att justera max storlek på test [x]
-        Kolla varför scan inte kör autotuning [x]
-        Printa COMPILEID
-            Få in COMPILEID i JSON filen [x]
-
-        Flush to disk with id, send uuid from bash [x]
-
-        Fixa så att ID:et sitter ordentligt och att EXecution plan skapas för varje skeleton
-        - Filnamnet ska vara id:ochType eller ett id som genereas i klassen Map som sätts på 
-          filen [x]
-
-        Testa hoppa två två istället för att öka exponenten med 1
-        Future<ExecutionPlan> option
-
-
-    TODO:
-        - Apply autotuning to all skeletons.
-        - See if there are otherways to handle incremental sampling size.
-        - Measure performance.
-        - Clean up outputs,
-        - Transfer ownership of Executionplan
-        - Set on thread exit.
-        - Cleanup
-*/
 
 using namespace skepu::backend::autotune::sampler;
 using std::tuple;
+
+// ==================
+using context = std::initializer_list<int>;
+
+void print(size_t elemnt) {
+    std::cout << elemnt << " ";
+}
+
+template<size_t... all>
+void arg_dim_printer(Dimensions<all...>) {
+    context{ (print(all), 0)... };
+    LOG(INFO) <<  " NEXT " << std::endl;
+}
+// ==================
+
 
 namespace skepu 
 {
@@ -59,8 +43,11 @@ namespace skepu
     {
         namespace autotune
         {   
+
             
-            // ======================= Autotuning ========================================================
+            
+        
+            // ======================= Autotuning =====================
             template<typename Skeleton>
             using isMapOverlap = typename std::integral_constant<bool, Skeleton::skeletonType == SkeletonType::MapOverlap2D>;
 
@@ -70,19 +57,18 @@ namespace skepu
             template<typename Skeleton, size_t... OI, size_t... EI, size_t... CI, size_t... UI>
             ExecutionPlan sampling(Skeleton& skeleton, pack_indices<OI...> oi, pack_indices<EI...> ei, pack_indices<CI...> ci, pack_indices<UI...> ui) 
             {
-            
+                
+                /*
                 std::cout << "....." << std::endl;
                 print_index<OI...>::print();
                 print_index<EI...>::print();
                 print_index<CI...>::print();
                 print_index<UI...>::print();
                 std::cout << "OI, EI, CI, UI" << std::endl;
+                */
 
-                std::cout << "##### MAX SIZE: " << ConditionalSampler<Skeleton>::max_sample << std::endl;
-                std::cout << "##### PREFERS MATRIX: " << Skeleton::prefers_matrix << std::endl;
-                
-                using SRT = ConditionalSampler<Skeleton>;//Sampler<Skeleton>;
-
+                using SRT = ConditionalSampler<Skeleton>;
+                LOG(INFO) << "Skeleton sampling started" << std::endl;
                 SampleRunner<
                     SRT, 
                     pack_indices<OI...>, 
@@ -90,8 +76,23 @@ namespace skepu
                     pack_indices<CI...>, 
                     pack_indices<UI...>> runner{SRT(skeleton)};
                         
-                auto plan = runner.start();//(argSeq.samples);
-                std::cout << "SAMPLING IS DONE!!!" << std::endl;
+                using Dims = typename ArgDimInit<Skeleton>::type; 
+                auto plan = runner.template start<Dims>();
+                LOG(INFO) << "Sampling is DONE!" << std::endl;
+
+                // ========= NEW == Prints dimensions
+                // using dims = typename ArgDimInit<Skeleton>::type; 
+                // using ret  = typename dims::ret_dim;
+                // using el   = typename dims::elwise_dim;
+                // using cont = typename dims::cont_dim;
+                // using uni  = typename dims::uni_dim;
+                // arg_dim_printer(ret());
+                // arg_dim_printer(el());
+                // arg_dim_printer(cont());
+                // arg_dim_printer(uni());
+                // =========
+
+
                 return plan;
             }
 
