@@ -113,8 +113,19 @@ namespace skepu
 					SKEPU_ERROR("Map: Non-matching container sizes");
 				
 				this->finalizeTuning();
-				this->selectBackend(size);
 				
+				this->selectBackend(
+					DispatchSize {
+						size,
+						{Size{size, 0}},
+						{Size{size, 0}},
+						{Size{0, 0}},
+						{Size{0, 0}}
+					}
+				);
+				//this->selectBackend(size);
+
+
 				switch (this->m_selected_spec->activateBackend())
 				{
 				case Backend::Type::Hybrid:
