@@ -117,7 +117,23 @@ namespace skepu
 					SKEPU_ERROR("Non-matching output container size");
 
 				this->finalizeTuning();
-				this->selectBackend(Vsize + Hsize);
+				//this->selectBackend(Vsize + Hsize);
+				
+				//args_tuple<sizeof...(OI), CallArgs...>::template value<OI...>(std::forward<CallArgs>(args)...),
+				auto dispatchSize = DispatchSize::Create(
+						size,
+						args_tuple<0>::empty(),
+						args_tuple<sizeof...(VEI) + sizeof...(HEI), CallArgs...>::template value<VEI..., HEI...>(std::forward<CallArgs>(args)...),
+						args_tuple<sizeof...(AI), CallArgs...>::template value<AI...>(std::forward<CallArgs>(args)...),
+						args_tuple<sizeof...(CI), CallArgs...>::template value<CI...>(std::forward<CallArgs>(args)...)
+					);
+				//dispatchSize.collapseDimension(dispatchSize.elwiseSize);
+				
+				this->selectBackend(
+					dispatchSize
+				);
+				
+
 
 				switch (this->m_selected_spec->activateBackend())
 				{
