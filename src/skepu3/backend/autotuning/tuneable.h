@@ -62,7 +62,11 @@ namespace skepu
                     {
                         future = promise.get_future();
                         // TODO: SET value on thread exit instead
-                        std::thread thread = std::thread( [&skeleton]{ skeleton.promise.set_value(samplingWrapper(skeleton)); skeleton.useTuning.store(true); });
+                        std::thread thread = std::thread( [&skeleton] { 
+                            skeleton.promise.set_value(samplingWrapper(skeleton)); 
+                            skeleton.useTuning.store(true); 
+                        });
+                        
                         tuningThreadId = thread.get_id();
                         thread.detach();
                         // future = std::async(std::launch::async, [&]{ 

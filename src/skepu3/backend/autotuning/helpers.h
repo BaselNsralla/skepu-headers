@@ -21,14 +21,11 @@ namespace skepu
                                                 typename add_container_layer<skepu::template Matrix, TupleType>::type,
                                                 typename add_container_layer<skepu::template Vector, TupleType>::type>::type;
 
-                template<bool PrefersMatrix, typename T> 
-                using PreferedContainer = typename std::conditional<PrefersMatrix, skepu::Matrix<T>, skepu::Vector<T>>::type;
-                
-                template<typename Skeleton, typename Element>
+                template<typename Skeleton, typename T>
                 struct Containerize 
                 {
-                    static constexpr bool pm = Skeleton::skeletonType == SkeletonType::MapOverlap2D || Skeleton::prefers_matrix;
-                    using type = PreferedContainer<pm, Element>;
+                    static constexpr bool PrefersMatrix = Skeleton::skeletonType == SkeletonType::MapOverlap2D || Skeleton::prefers_matrix;
+                    using type = typename std::conditional<PrefersMatrix, skepu::Matrix<T>, skepu::Vector<T>>::type;
                 };
 
                 template<typename Skeleton, typename T>

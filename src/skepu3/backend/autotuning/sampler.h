@@ -161,8 +161,8 @@ namespace skepu
                 struct Sampler 
                 {
 
-                    using ElwiseWrapped    = typename containerized_layer<Skeleton, typename Skeleton::ElwiseArgs>::type;       //ArgContainerTup<pm, typename Skeleton::ElwiseArgs>;
                     using ResultWrapped    = typename containerized_layer<Skeleton, typename Skeleton::ResultArg>::type;        //ArgContainerTup<pm, typename Skeleton::ResultArg>;
+                    using ElwiseWrapped    = typename containerized_layer<Skeleton, typename Skeleton::ElwiseArgs>::type;       //ArgContainerTup<pm, typename Skeleton::ElwiseArgs>;
                     using ContainerWrapped = typename containerized_layer<Skeleton, typename Skeleton::ContainerArgs>::type;    //ArgContainerTup<pm, typename Skeleton::ContainerArgs>;
                     using UniformWrapped   = typename Skeleton::UniformArgs;                                                    //typename containerized_layer<Skeleton, typename Skeleton::UniformArgs>::type;//ArgContainerTup<pm, typename Skeleton::UniformArgs>;
 
@@ -179,13 +179,141 @@ namespace skepu
                                     >::value;
                 };
 
+     
+                // template<typename... Others, size_t... sizes>
+                // struct consume {};
+
+                // template<typename... A, size_t first, size_t... sizes>
+                // struct consume<tuple<A...>, first, sizes...> // consume ko
+                // {
+                //     using type = typename std::conditional<sizeof...(A) == 0, index_sequence<sizes..., 0>, index_sequence<sizes..., first>>::type;
+                // };
+
+                // template<typename... A, typename... Others, size_t first, size_t... sizes>
+                // struct consume<tuple<A...>, Others..., first, sizes...> 
+                // {
+                //     //sizeof...(A)
+                //     using type = typename std::conditional<sizeof...(A) == 0, typename std::conditional<Others..., first, sizes..., 0>, typename std::conditional<Others..., sizes..., first>>::type::type  
+                // };
+
+                // template<typename Is, typename A, typename B, typename C, typename D>
+                // struct normalize_sequence {};
+
+                // template<size_t... sizes, typename A, typename B, typename C, typename D>
+                // struct normailized_sequence<index_sequence<sizes...>, A, B, C, D>
+                // {
+                //     using type = consume<A, B, C, D, sizes...>::type; 
+                // };
+
+                // template<typename A, typename B, typename C, typename D>
+                // struct SampledArgs {
+                //     A a;
+                //     B b;
+                //     C c;
+                //     D d;
+
+                    // template<typename IndexSequence>
+                    // void apply()  {
+                    //     zot<
+                    //     typename normalized_sequence<IndexSequence, A, B, C, D>::type,
+                    //     A, B, C, D                
+                    //     >(a, b, c, d);
+                    // }
+                //};
+
+
+                /*
+                If the this will be created once in the tuner function then the 
+                template function sample, can be replaced by a normal function
+                and the template parameters can be included in the strcut template
+                with nameless arguments in the constructor  
+
+                The reason for the  sample being a template here is becasue the indicies will
+                be very hard to handle outside the construtor, (i.e declaring the type only)
+                because i don't really know if it can see different contigous spreads as different
+                template parameters,
+
+                Example:
+                X<EI.., CI...> will this cause ambiguity?
+                */
+                template<typename Skeleton, SkeletonType = Skeleton::skeletonType>
+                struct ASampler: public Sampler<Skeleton> 
+                {
+
+                    Skeleton& skeleton;
+                    ASampler(Skeleton& skeleton): skeleton{skeleton} {}
+
+                    using Parent = Sampler<Skeleton>;
+
+                    using typename Parent::ResultWrapped;
+                    using typename Parent::ElwiseWrapped;
+                    using typename Parent::ContainerWrapped;
+                    using typename Parent::UniformWrapped; 
+
+
+                    // ResultWrapped    resultArg;
+                    // ElwiseWrapped    elwiseArg;
+                    // ContainerWrapped containerArg;
+                    // UniformWrapped   uniArg;
+
+                    // template<size_t ResSize, size_t ElemSize, size_t ContSize, size_t UniSize, size_t... OI, size_t... EI, size_t... CI, size_t... UI>  
+                    // SampledArgs<ResultWrapped, ElwiseWrapped, ContainerWrapped, UniformWrapped> 
+                    //     sample(
+                    //         index_sequence<ResSize, ElemSize, ContSize, UniSize>,
+                    //         pack_indices<OI...>, 
+                    //         pack_indices<EI...>, 
+                    //         pack_indices<CI...>, 
+                    //         pack_indices<UI...>) // Vi kan få sizes här och de kommer alltid ha samma ordning, så en index_sequence här
+                    // {
+                    //     SampledArgs<ResultWrapped, ElwiseWrapped, ContainerWrapped, UniformWrapped> result;
+                    //     foreach::sample<OI...>(result.resultArg,    base2Pow(ResSize));
+                    //     foreach::sample<EI...>(result.elwiseArg,    base2Pow(ElemSize));
+                    //     foreach::sample<CI...>(result.containerArg, base2Pow(ContSize));
+                    //     foreach::sample<UI...>(result.uniArg,       base2Pow(UniSize));
+                    //     return result;
+                    //     /*
+                    //         for each non empty type, but its object in the applied tuple
+                    //         send the content as a variadict thin and the index_sequence 
+                    //         to impl
+                    //         impl will apply sample foreach on each param together with each index in the sequence :  ..., ... <- or something like that
+
+                    //     */
+                    // }
+
+                    void cleanup() {}
+
+                    template<size_t... OI, size_t... EI, size_t... CI, size_t... UI>
+                    SampledArgs<ResultWrapped, ElwiseWrapped, ContainerWrapped, UniformWrapped> 
+                        sample(
+                            std::vector<std::vector<Size>>& sample_vec,
+                            pack_indices<OI...>, 
+                            pack_indices<EI...>, 
+                            pack_indices<CI...>, 
+                            pack_indices<UI...>) // Vi kan få sizes här och de kommer alltid ha samma ordning, så en index_sequence här
+                    {
+                        SampledArgs<ResultWrapped, ElwiseWrapped, ContainerWrapped, UniformWrapped> result;
+                    
+                        foreach::sample<OI...>(result.resultArg,    sample_vec[0]);
+                    
+                        foreach::sample<EI...>(result.elwiseArg,    sample_vec[1]);
+                    
+                        foreach::sample<CI...>(result.containerArg, sample_vec[2]);
+                    
+                        foreach::sample<UI...>(result.uniArg,       sample_vec[3]);
+
+                        static_setup<Skeleton>(skeleton);
+
+                        return result;
+                    }
+                };
+
                 template<typename Skeleton>
-                struct MapOverlapSampler: public Sampler<Skeleton>
+                struct ASampler<Skeleton, SkeletonType::MapOverlap2D>: public Sampler<Skeleton>
                 {
                     // Typerna för variablerna och sample metoden bör abstraheras till flera using deklarationer
                     Skeleton& skeleton;
 
-                    MapOverlapSampler(Skeleton& skeleton): skeleton{skeleton} {}
+                    ASampler(Skeleton& skeleton): skeleton{skeleton} {}
 
                     using Parent = Sampler<Skeleton>;
 
@@ -292,132 +420,9 @@ namespace skepu
                     }
                 };
 
-                // template<typename... Others, size_t... sizes>
-                // struct consume {};
-
-                // template<typename... A, size_t first, size_t... sizes>
-                // struct consume<tuple<A...>, first, sizes...> // consume ko
-                // {
-                //     using type = typename std::conditional<sizeof...(A) == 0, index_sequence<sizes..., 0>, index_sequence<sizes..., first>>::type;
-                // };
-
-                // template<typename... A, typename... Others, size_t first, size_t... sizes>
-                // struct consume<tuple<A...>, Others..., first, sizes...> 
-                // {
-                //     //sizeof...(A)
-                //     using type = typename std::conditional<sizeof...(A) == 0, typename std::conditional<Others..., first, sizes..., 0>, typename std::conditional<Others..., sizes..., first>>::type::type  
-                // };
-
-                // template<typename Is, typename A, typename B, typename C, typename D>
-                // struct normalize_sequence {};
-
-                // template<size_t... sizes, typename A, typename B, typename C, typename D>
-                // struct normailized_sequence<index_sequence<sizes...>, A, B, C, D>
-                // {
-                //     using type = consume<A, B, C, D, sizes...>::type; 
-                // };
-
-                // template<typename A, typename B, typename C, typename D>
-                // struct SampledArgs {
-                //     A a;
-                //     B b;
-                //     C c;
-                //     D d;
-
-                    // template<typename IndexSequence>
-                    // void apply()  {
-                    //     zot<
-                    //     typename normalized_sequence<IndexSequence, A, B, C, D>::type,
-                    //     A, B, C, D                
-                    //     >(a, b, c, d);
-                    // }
-                //};
 
 
-                /*
-                If the this will be created once in the tuner function then the 
-                template function sample, can be replaced by a normal function
-                and the template parameters can be included in the strcut template
-                with nameless arguments in the constructor  
 
-                The reason for the  sample being a template here is becasue the indicies will
-                be very hard to handle outside the construtor, (i.e declaring the type only)
-                because i don't really know if it can see different contigous spreads as different
-                template parameters,
-
-                Example:
-                X<EI.., CI...> will this cause ambiguity?
-                */
-                template<typename Skeleton>
-                struct ASampler: public Sampler<Skeleton> 
-                {
-
-                    Skeleton& skeleton;
-                    ASampler(Skeleton& skeleton): skeleton{skeleton} {}
-
-                    using Parent = Sampler<Skeleton>;
-
-                    using typename Parent::ResultWrapped;
-                    using typename Parent::ElwiseWrapped;
-                    using typename Parent::ContainerWrapped;
-                    using typename Parent::UniformWrapped; 
-
-
-                    // ResultWrapped    resultArg;
-                    // ElwiseWrapped    elwiseArg;
-                    // ContainerWrapped containerArg;
-                    // UniformWrapped   uniArg;
-
-                    // template<size_t ResSize, size_t ElemSize, size_t ContSize, size_t UniSize, size_t... OI, size_t... EI, size_t... CI, size_t... UI>  
-                    // SampledArgs<ResultWrapped, ElwiseWrapped, ContainerWrapped, UniformWrapped> 
-                    //     sample(
-                    //         index_sequence<ResSize, ElemSize, ContSize, UniSize>,
-                    //         pack_indices<OI...>, 
-                    //         pack_indices<EI...>, 
-                    //         pack_indices<CI...>, 
-                    //         pack_indices<UI...>) // Vi kan få sizes här och de kommer alltid ha samma ordning, så en index_sequence här
-                    // {
-                    //     SampledArgs<ResultWrapped, ElwiseWrapped, ContainerWrapped, UniformWrapped> result;
-                    //     foreach::sample<OI...>(result.resultArg,    base2Pow(ResSize));
-                    //     foreach::sample<EI...>(result.elwiseArg,    base2Pow(ElemSize));
-                    //     foreach::sample<CI...>(result.containerArg, base2Pow(ContSize));
-                    //     foreach::sample<UI...>(result.uniArg,       base2Pow(UniSize));
-                    //     return result;
-                    //     /*
-                    //         for each non empty type, but its object in the applied tuple
-                    //         send the content as a variadict thin and the index_sequence 
-                    //         to impl
-                    //         impl will apply sample foreach on each param together with each index in the sequence :  ..., ... <- or something like that
-
-                    //     */
-                    // }
-
-                    void cleanup() {}
-
-                    template<size_t... OI, size_t... EI, size_t... CI, size_t... UI>
-                    SampledArgs<ResultWrapped, ElwiseWrapped, ContainerWrapped, UniformWrapped> 
-                        sample(
-                            std::vector<std::vector<Size>>& sample_vec,
-                            pack_indices<OI...>, 
-                            pack_indices<EI...>, 
-                            pack_indices<CI...>, 
-                            pack_indices<UI...>) // Vi kan få sizes här och de kommer alltid ha samma ordning, så en index_sequence här
-                    {
-                        SampledArgs<ResultWrapped, ElwiseWrapped, ContainerWrapped, UniformWrapped> result;
-                    
-                        foreach::sample<OI...>(result.resultArg,    sample_vec[0]);
-                    
-                        foreach::sample<EI...>(result.elwiseArg,    sample_vec[1]);
-                    
-                        foreach::sample<CI...>(result.containerArg, sample_vec[2]);
-                    
-                        foreach::sample<UI...>(result.uniArg,       sample_vec[3]);
-
-                        static_setup<Skeleton>(skeleton);
-
-                        return result;
-                    }
-                };
             }
         } // namespace autotune
     }
