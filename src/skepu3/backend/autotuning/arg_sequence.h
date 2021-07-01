@@ -498,10 +498,6 @@ namespace skepu
                     LOG(INFO) << "Generating all argument sequences..." << std::endl;
                     ArgSequence argSeq = configured_sequence(
                         Permutation<
-                            //Single<Ultra<typename Skeleton::ResultArg>>,
-                            //Single<Ultra<typename Skeleton::ElwiseArgs>>,
-                            //Single<Standard<typename Skeleton::ResultArg>>,
-                            //Single<Standard<typename Skeleton::ElwiseArgs>>,
                             Group<Standard<Dimensions<ret...>>, Standard<Dimensions<elwise...>>>,
                             Single<Ultra<Dimensions<cont...>>>,
                             Single<Ultra<Dimensions<uni...>>>
@@ -525,7 +521,7 @@ namespace skepu
                     ArgSequence argSeq = configured_sequence(
                         Permutation<
                             Single<Standard<Dimensions<ret...>>>,
-                            Single<Standard<Dimensions<elwise...>>>,
+                            Group<Standard<Dimensions<elwise...>>>,
                             Single<Ultra<Dimensions<cont...>>>,
                             Single<Ultra<Dimensions<uni...>>>
                         >()
@@ -543,6 +539,11 @@ namespace skepu
             template<>
             struct generate_sequence_impl<SkeletonType::Reduce2D>: reduce_sequence 
             {};
+            
+            template<>
+            struct generate_sequence_impl<SkeletonType::MapReduce>: reduce_sequence 
+            {};
+
 
 
             template<typename Skeleton, size_t... ret, size_t... elwise, size_t... cont, size_t... uni>

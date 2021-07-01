@@ -153,6 +153,17 @@ namespace skepu
 
 					return d;
 				}
+				
+				void collapseDimension(std::vector<AT::Size>& someArg) 
+				{
+					std::vector<AT::Size> collapsed(someArg.size());
+					std::transform(someArg.begin(), someArg.end(), collapsed.begin(), [] (AT::Size const& multiDim) {
+						size_t y = multiDim.y == 0 ? 1 : multiDim.y;
+						return AT::Size{multiDim.y*multiDim.x, 0};
+					});
+
+					someArg = std::move(collapsed);
+				}
 
 			};
 		}
