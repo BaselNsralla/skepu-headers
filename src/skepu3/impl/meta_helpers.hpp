@@ -152,6 +152,7 @@ inline auto get_any(Tp&&... tps) -> decltype(get<0>(tps...))
 /////////////////////////////
 // pack indices (basically C++14 std::index_sequence)
 
+
 template <size_t...>
 struct pack_indices {};
 
@@ -176,6 +177,16 @@ struct make_pack_indices
 	static_assert(Sp <= Ep, "__make_tuple_indices input error");
 	typedef typename make_indices_imp<Sp, pack_indices<>, Ep>::type type;
 };
+
+template<typename PI>
+struct pack_indices_size {};
+
+template<size_t... indices>
+struct pack_indices_size<pack_indices<indices...>> 
+{
+	static constexpr size_t value = sizeof...(indices);
+};
+
 
 
 namespace future_std
