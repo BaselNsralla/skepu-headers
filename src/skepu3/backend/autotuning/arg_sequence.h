@@ -14,7 +14,7 @@
 #include <skepu3/backend/autotuning/size.h>
 
 #include <skepu3/backend/logging/logger.h>
-#include <skepu3/backend/autotuning/tune_range.h>
+#include <skepu3/backend/autotuning/tune_limit.h>
 #include <skepu3/impl/region.hpp>
 #include <skepu3/backend/autotuning/arg_dimension.h>
 namespace skepu 
@@ -269,14 +269,14 @@ namespace skepu
 
 
             template<bool permutate>
-            std::vector<Size> sizes2D();
+            std::vector<Size> sizes2D(SampleLimit limit);
 
             template<>
-            std::vector<Size> sizes2D<true>() {
+            std::vector<Size> sizes2D<true>(SampleLimit limit) {
                 std::vector<Size> sizes;
-                for (size_t size_x{2u}; size_x < MULTI_DIM; ++size_x)
+                for (size_t size_x{2u}; size_x < limit.multi_dim; ++size_x)
                 {
-                    for (size_t size_y{0u}; size_y < MULTI_DIM; ++size_y)
+                    for (size_t size_y{0u}; size_y < limit.multi_dim; ++size_y)
                     {
                         sizes.push_back({size_x, size_y});
                     }   
@@ -285,9 +285,9 @@ namespace skepu
             }
 
             template<>
-            std::vector<Size> sizes2D<false>() {
+            std::vector<Size> sizes2D<false>(SampleLimit limit) {
                 std::vector<Size> sizes;
-                for (size_t size_x{1u}; size_x < MULTI_DIM; ++size_x)
+                for (size_t size_x{1u}; size_x < limit.multi_dim; ++size_x)
                 {
                     sizes.push_back({size_x, size_x});
                 }
@@ -295,9 +295,9 @@ namespace skepu
             }
 
 
-            std::vector<Size> sizes1D() {
+            std::vector<Size> sizes1D(SampleLimit limit) {
                 std::vector<Size> sizes;
-                for (size_t size_x{1u}; size_x < SINGLE_DIM; ++size_x)
+                for (size_t size_x{1u}; size_x < limit.single_dim; ++size_x)
                 {
                     sizes.push_back({size_x, 0});
                 }
@@ -342,18 +342,18 @@ namespace skepu
 
 
             template<bool tuneFactor, size_t dimensionality>
-            std::vector<Size> combinations() 
+            std::vector<Size> combinations(SampleLimit limit) 
             {   
                 switch (dimensionality)
                 {
                 case 1u:
-                    return sizes1D();
+                    return sizes1D(limit);
                     break;
                 case 2u:
-                    return sizes2D<tuneFactor>();                
+                    return sizes2D<tuneFactor>(limit);                
                     break;
                 default:
-                    return sizes1D();
+                    return sizes1D(limit);
                     break;
                 }
                  
@@ -366,28 +366,28 @@ namespace skepu
                 return argSize;
             }
 
-            ArgPerm arg_combinations(Ultra<Dimensions<>>, bool permutate) {
+            ArgPerm arg_combinations(SampleLimit limit, Ultra<Dimensions<>>, bool permutate) {
                 return empty_arg_combinations();
             }
 
-            ArgPerm arg_combinations(Standard<Dimensions<>>, bool permutate) {
+            ArgPerm arg_combinations(SampleLimit limit, Standard<Dimensions<>>, bool permutate) {
                 return empty_arg_combinations();
             }
 
             template<size_t... Sizes>
-            ArgPerm arg_combinations(Ultra<Dimensions<Sizes...>>, bool permutate) {
+            ArgPerm arg_combinations(SampleLimit limit, Ultra<Dimensions<Sizes...>>, bool permutate) {
                 //size_t size = sizeof...(Types);
                 ArgPerm argSize;
-                context { (argSize.add(combinations<true, Sizes>()), 0)... };
+                context { (argSize.add(combinations<true, Sizes>(limit)), 0)... };
                 argSize.permutations(permutate ? Mechanism::ALL : Mechanism::SYMETRIC);
                 return argSize;
             };
 
             template<size_t... Sizes>
-            ArgPerm arg_combinations(Standard<Dimensions<Sizes...>>, bool permutate) {
+            ArgPerm arg_combinations(SampleLimit limit, Standard<Dimensions<Sizes...>>, bool permutate) {
                 //size_t size = sizeof...(Types);
                 ArgPerm argSize;
-                context { (argSize.add(combinations<false, Sizes>()), 0)... };
+                context { (argSize.add(combinations<false, Sizes>(limit)), 0)... };
                 argSize.permutations(permutate ? Mechanism::ALL : Mechanism::SYMETRIC);
                 return argSize;
             };
@@ -408,9 +408,9 @@ namespace skepu
 
 
             template<typename... T>
-            ArgCatPerm resolve_form(Group<T...>) {
+            ArgCatPerm resolve_form(SampleLimit limit, Group<T...>) {
                 ArgCatPerm perm;
-                context { (perm.add(arg_combinations(T(), false)), 0)... }; //assert all are of same container (Standard)
+                context { (perm.add(arg_combinations(limit, T(), false)), 0)... }; //assert all are of same container (Standard)
                 perm.permutations(Mechanism::SYMETRIC);
                 // for (auto& a: perm.permutation_sequence) {
                 //     std::cout << "{ ";
@@ -429,9 +429,9 @@ namespace skepu
             }
 
             template<typename T>
-            ArgCatPerm resolve_form(Single<T>) {
+            ArgCatPerm resolve_form(SampleLimit limit, Single<T>) {
                 ArgCatPerm perm;
-                context { (perm.add(arg_combinations(T(), true)), 0) }; 
+                context { (perm.add(arg_combinations(limit, T(), true)), 0) }; 
                 perm.permutations();
                 // std::cout << "CATEGORY:: \n";
                 
@@ -455,9 +455,9 @@ namespace skepu
 
 
             template<typename... T>
-            ArgSequence configured_sequence(Permutation<T...>) {
+            ArgSequence configured_sequence(SampleLimit limit, Permutation<T...>) {
                 ArgSequence seq;
-                context { (seq.add(resolve_form(T())), 0)... };
+                context { (seq.add(resolve_form(limit, T())), 0)... };
                 seq.permutations();
 
                 // for (auto& a: seq.input) { // En hel sample för varje element
@@ -490,6 +490,7 @@ namespace skepu
                 
                 template<size_t... ret, size_t... elwise, size_t... cont, size_t... uni>
                 static ArgSequence generate( 
+                                        SampleLimit limit,
                                         Dimensions<ret...>, 
                                         Dimensions<elwise...>,
                                         Dimensions<cont...>,
@@ -497,6 +498,7 @@ namespace skepu
                 {   
                     LOG(INFO) << "Generating all argument sequences..." << std::endl;
                     ArgSequence argSeq = configured_sequence(
+                        limit,
                         Permutation<
                             Group<Standard<Dimensions<ret...>>, Standard<Dimensions<elwise...>>>,
                             Single<Ultra<Dimensions<cont...>>>,
@@ -506,12 +508,38 @@ namespace skepu
                     LOG(INFO) << "Sequence generation DONE!" << std::endl;
                     return argSeq;
                 }
+
+                template<size_t... ret, size_t... cont, size_t... uni>
+                static ArgSequence generate( 
+                                        SampleLimit limit,
+                                        Dimensions<ret...>, 
+                                        Dimensions<>,
+                                        Dimensions<cont...>,
+                                        Dimensions<uni...>) 
+                {   
+                    LOG(INFO) << "Generating all argument sequences..." << std::endl;
+                    ArgSequence argSeq = configured_sequence(
+                        limit,
+                        Permutation<
+                            Single<Standard<Dimensions<ret...>>>,
+                            Single<Standard<Dimensions<>>>,
+                            Single<Ultra<Dimensions<cont...>>>,
+                            Single<Ultra<Dimensions<uni...>>>
+                        >()
+                    );
+                    LOG(INFO) << "Sequence generation DONE!" << std::endl;
+                    return argSeq;
+                }
+
+
             };
 
             struct reduce_sequence 
             {
                 template<size_t... ret, size_t... elwise, size_t... cont, size_t... uni>
-                static ArgSequence generate( 
+                static ArgSequence generate
+                                        (
+                                        SampleLimit limit, 
                                         Dimensions<ret...>, 
                                         Dimensions<elwise...>,
                                         Dimensions<cont...>,
@@ -519,6 +547,7 @@ namespace skepu
                 {   
                     LOG(INFO) << "Generating all argument sequences..." << std::endl;
                     ArgSequence argSeq = configured_sequence(
+                        limit,
                         Permutation<
                             Single<Standard<Dimensions<ret...>>>,
                             Group<Standard<Dimensions<elwise...>>>,
@@ -554,25 +583,25 @@ namespace skepu
                                          Dimensions<uni...> u) {
                 //Group<Standard<typename Skeleton::ResultArg>, Standard< typename Skeleton::ElwiseArgs>>,
                 
-                ArgSequence argSeq = generate_sequence_impl<Skeleton::skeletonType>::generate(r, e, c, u);
+                ArgSequence argSeq = generate_sequence_impl<Skeleton::skeletonType>::generate(skeleton.tune_limit(), r, e, c, u);
 
-                std::ofstream ostrm("sequences.json", std::ios::trunc);
-                ostrm << "DONE SAMPLING " << argSeq.input.size() << std::endl;
-                for (auto& a: argSeq.samples) 
-                { // En hel sample för varje element
-                    ostrm << "{" << std::endl;
-                    for (auto& b: a) 
-                    { // En hel variabel Input, output, uniform och gänget 
-                        ostrm << "    {" << std::endl;
-                        ostrm<< "\t";
-                        for (auto& c: b)  // Size?
-                        {
-                        ostrm << c.x <<  "|" << c.y << ", ";
-                        }
-                    ostrm << "\n    }" << std::endl;
-                    } 
-                    ostrm << "} \n" << std::endl;
-                }
+                // std::ofstream ostrm("sequences.json", std::ios::trunc);
+                // ostrm << "DONE SAMPLING " << argSeq.input.size() << std::endl;
+                // for (auto& a: argSeq.samples) 
+                // { // En hel sample för varje element
+                //     ostrm << "{" << std::endl;
+                //     for (auto& b: a) 
+                //     { // En hel variabel Input, output, uniform och gänget 
+                //         ostrm << "    {" << std::endl;
+                //         ostrm<< "\t";
+                //         for (auto& c: b)  // Size?
+                //         {
+                //         ostrm << c.x <<  "|" << c.y << ", ";
+                //         }
+                //     ostrm << "\n    }" << std::endl;
+                //     } 
+                //     ostrm << "} \n" << std::endl;
+                // }
                 return argSeq;
             }
         }

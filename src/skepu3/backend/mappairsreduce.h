@@ -23,6 +23,8 @@ namespace skepu
 		template<size_t Varity, size_t Harity, typename MapPairsFunc, typename ReduceFunc, typename CUDAKernel, typename CUDAReduceKernel, typename CLKernel>
 		class MapPairsReduce : public SkeletonBase, public Tuneable<MapPairsReduce<Varity, Harity, MapPairsFunc, ReduceFunc, CUDAKernel, CUDAReduceKernel, CLKernel>>
 		{
+
+			using TuneableT = Tuneable<MapPairsReduce<Varity, Harity, MapPairsFunc, ReduceFunc, CUDAKernel, CUDAReduceKernel, CLKernel>>;
 		public:
 			MapPairsReduce(CUDAKernel mappairsreduce, CUDAReduceKernel reduce)
 			: m_cuda_kernel(mappairsreduce), m_cuda_reduce_kernel(reduce)
@@ -121,6 +123,7 @@ namespace skepu
 				
 				//args_tuple<sizeof...(OI), CallArgs...>::template value<OI...>(std::forward<CallArgs>(args)...),
 				auto dispatchSize = DispatchSize::Create(
+						TuneableT::tune_limit(),
 						size,
 						args_tuple<0>::empty(),
 						args_tuple<sizeof...(VEI) + sizeof...(HEI), CallArgs...>::template value<VEI..., HEI...>(std::forward<CallArgs>(args)...),

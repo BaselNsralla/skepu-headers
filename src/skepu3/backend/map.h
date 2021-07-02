@@ -30,7 +30,7 @@ namespace skepu
 		class Map : public SkeletonBase, public Tuneable<Map<arity, MapFunc, CUDAKernel, CLKernel>>
 		{
 			// ==========================    Type definitions   ==========================
-
+			using TuneableT = Tuneable<Map<arity, MapFunc, CUDAKernel, CLKernel>>;
 			using T = typename MapFunc::Ret;
 			using F = ConditionalIndexForwarder<MapFunc::indexed, decltype(&MapFunc::CPU)>;
 
@@ -158,6 +158,7 @@ namespace skepu
 				//this->selectBackend(size);
 				this->selectBackend(
 					DispatchSize::Create(
+						TuneableT::tune_limit(),
 						size,
 						args_tuple<sizeof...(OI), CallArgs...>::template value<OI...>(args...),
 						args_tuple<sizeof...(EI), CallArgs...>::template value<EI...>(args...),

@@ -31,6 +31,7 @@ namespace skepu
 		template<typename MapOverlapFunc, typename CUDAKernel, typename C2, typename C3, typename C4, typename CLKernel>
 		class MapOverlap1D: public SkeletonBase, public Tuneable<MapOverlap1D<MapOverlapFunc, CUDAKernel, C2, C3, C4, CLKernel>>
 		{
+			using TuneableT = Tuneable<MapOverlap1D<MapOverlapFunc, CUDAKernel, C2, C3, C4, CLKernel>>;
 			using Ret = typename MapOverlapFunc::Ret;
 			using T = typename region_type<typename parameter_type<0, decltype(&MapOverlapFunc::CPU)>::type>::type;
 			
@@ -233,10 +234,10 @@ namespace skepu
 				
 				DispatchSize targetSize {
 					arg.size(),
-					get_size(std::make_tuple(res), seq<0u>()),
-					get_size(std::make_tuple(arg), seq<0u>()),
-					get_size(anyArgTup, gen_seq<std::tuple_size<decltype(anyArgTup)>::value>()),
-					get_size(ciArgTup,  gen_seq<std::tuple_size<decltype(ciArgTup)>::value>())
+					get_size(TuneableT::tune_limit(), std::make_tuple(res), seq<0u>()),
+					get_size(TuneableT::tune_limit(), std::make_tuple(arg), seq<0u>()),
+					get_size(TuneableT::tune_limit(), anyArgTup, gen_seq<std::tuple_size<decltype(anyArgTup)>::value>()),
+					get_size(TuneableT::tune_limit(), ciArgTup,  gen_seq<std::tuple_size<decltype(ciArgTup)>::value>())
 				};
 
 				std::cout << "INSERTED DATA " << std::endl;
@@ -322,10 +323,10 @@ namespace skepu
 				// TODO: Always 1D or 2D in both operator()
 				DispatchSize ds {
 					arg.size(),
-					get_size(std::make_tuple(res), seq<0u>()),
-					get_size(std::make_tuple(arg), seq<0u>()),
-					get_size(anyArgTup, gen_seq<std::tuple_size<decltype(anyArgTup)>::value>()),
-					get_size(ciArgTup,  gen_seq<std::tuple_size<decltype(ciArgTup)>::value>())
+					get_size(TuneableT::tune_limit(), std::make_tuple(res), seq<0u>()),
+					get_size(TuneableT::tune_limit(), std::make_tuple(arg), seq<0u>()),
+					get_size(TuneableT::tune_limit(), anyArgTup, gen_seq<std::tuple_size<decltype(anyArgTup)>::value>()),
+					get_size(TuneableT::tune_limit(), ciArgTup,  gen_seq<std::tuple_size<decltype(ciArgTup)>::value>())
 				};
 
 				this->selectBackend(ds);
@@ -479,6 +480,7 @@ namespace skepu
 		template<typename MapOverlapFunc, typename CUDAKernel, typename CLKernel>
 		class MapOverlap2D: public SkeletonBase, public Tuneable<MapOverlap2D<MapOverlapFunc, CUDAKernel, CLKernel>>
 		{
+			using TuneableT = Tuneable<MapOverlap2D<MapOverlapFunc, CUDAKernel, CLKernel>>;
 			using Ret = typename MapOverlapFunc::Ret;
 			using T   = typename region_type<typename parameter_type<(MapOverlapFunc::indexed ? 1 : 0), decltype(&MapOverlapFunc::CPU)>::type>::type;
 			using F   = ConditionalIndexForwarder<MapOverlapFunc::indexed, decltype(&MapOverlapFunc::CPU)>;
@@ -656,6 +658,7 @@ namespace skepu
 
 				this->selectBackend(
 					DispatchSize::Create(
+						TuneableT::tune_limit(),
 						get<0>(args...).size(),
 						args_tuple<sizeof...(OI), CallArgs...>::template value<OI...>(args...),
 						args_tuple<sizeof...(EI), CallArgs...>::template value<EI...>(args...),

@@ -31,6 +31,8 @@ namespace skepu
 		template<size_t arity, typename MapFunc, typename ReduceFunc, typename CUDAKernel, typename CUDAReduceKernel, typename CLKernel>
 		class MapReduce : public SkeletonBase, public Tuneable<MapReduce<arity, MapFunc, ReduceFunc, CUDAKernel, CUDAReduceKernel, CLKernel>>
 		{
+			using TuneableT = Tuneable<MapReduce<arity, MapFunc, ReduceFunc, CUDAKernel, CUDAReduceKernel, CLKernel>>;
+
 		public:
 			MapReduce(CUDAKernel mapreduce, CUDAReduceKernel reduce)
 			: m_cuda_kernel(mapreduce), m_cuda_reduce_kernel(reduce)
@@ -136,6 +138,7 @@ namespace skepu
 				this->finalizeTuning();
 
 				auto dispatchSize = DispatchSize::Create(
+						TuneableT::tune_limit(),
 						size,
 						args_tuple<0>::empty(),
 						args_tuple<sizeof...(EI), CallArgs...>::template value<EI...>(std::forward<CallArgs>(args)...),

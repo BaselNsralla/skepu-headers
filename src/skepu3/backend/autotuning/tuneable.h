@@ -8,6 +8,7 @@
 #include <future>
 #include <thread>
 #include <skepu3/backend/logging/logger.h>
+#include <skepu3/backend/autotuning/tune_limit.h>
 namespace skepu 
 {
     namespace backend 
@@ -40,6 +41,7 @@ namespace skepu
                 string tuneId   = std::to_string(Incremental<long long>::next());
 
             private:
+                SampleLimit sample_quota;
                 std::future<ExecutionPlan> future;
                 bool active = false;
                 std::atomic<bool> useTuning{false};
@@ -50,11 +52,18 @@ namespace skepu
                     return std::this_thread::get_id() == tuningThreadId;
                 }
 
+
+
             public:
+                SampleLimit tune_limit() 
+                {
+                    return sample_quota;
+                }
                 //static const long long tuneId = Incremental<long>::value;//::next(); 
-                void autotuning(TuneExecutionPolicy policy = TuneExecutionPolicy::seq) 
+                void autotuning(Quota quota = Quota::HIGH, TuneExecutionPolicy policy = TuneExecutionPolicy::seq) 
                 {   
                     // TODO: switch tuneType
+                    sample_quota = SampleQuota(quota);
                     active = true;
                     Skeleton& skeleton = *(static_cast<Skeleton*>(this));
         
