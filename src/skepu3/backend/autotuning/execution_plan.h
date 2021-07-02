@@ -85,7 +85,7 @@ namespace skepu
                     bool eeql = inbound(other[1], sample[1]);
                     bool ceql = inbound(other[2], sample[2]);
                     bool ueql = inbound(other[3], sample[3]);
-                    return eeql && eeql && ceql && ueql;
+                    return reql && eeql && ceql && ueql;
                 }
 
                 bool operator==(DispatchSize& other) 
@@ -94,7 +94,7 @@ namespace skepu
                     bool eeql = inbound(other.elwiseSize, sample[1]);
                     bool ceql = inbound(other.containerSize, sample[2]);
                     bool ueql = inbound(other.uniformSize, sample[3]);
-                    return eeql && eeql && ceql && ueql;
+                    return reql && eeql && ceql && ueql;
                 }
 
             };
@@ -216,7 +216,7 @@ namespace skepu
             bool ExecutionPlan::exist(ExecutionPlan& plan, string compileId, string tuneId) 
             {
                 string filename = compileId + tuneId; 
-                std::ifstream sfile("/home/lized/Skrivbord/test/" + compileId + tuneId + ".json");
+                std::ifstream sfile(compileId + tuneId + ".json");
                 
                 if(sfile) 
                 {
@@ -235,7 +235,7 @@ namespace skepu
 
             void ExecutionPlan::persist(ExecutionPlan& plan, string tuneId) 
             {
-                std::ofstream file("/home/lized/Skrivbord/test/" + plan.id + tuneId + ".json"); 
+                std::ofstream file(plan.id + tuneId + ".json"); 
                 if(file) 
                 {
                     file << plan << std::flush;
