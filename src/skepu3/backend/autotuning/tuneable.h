@@ -60,7 +60,7 @@ namespace skepu
                     return sample_quota;
                 }
                 //static const long long tuneId = Incremental<long>::value;//::next(); 
-                void autotuning(Quota quota = Quota::HIGH, TuneExecutionPolicy policy = TuneExecutionPolicy::seq) 
+                void autotuning(Quota quota = Quota::LOW, TuneExecutionPolicy policy = TuneExecutionPolicy::seq) 
                 {   
                     // TODO: switch tuneType
                     sample_quota = SampleQuota(quota);
