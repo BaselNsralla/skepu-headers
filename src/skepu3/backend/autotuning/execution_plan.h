@@ -155,33 +155,33 @@ namespace skepu
                 BackendSpec optimalBackend(DispatchSize& targetSize)
                 {
                     // NOTE: Dispatched size kommer ha samma vector size på varje argument.
-                    LOG(INFO) << "Finding a backend for the following dispatch size format:" << std::endl;
-                    for (auto& s: targetSize.outputSize) {
-                        std::cout << s.x << "|" << s.y << "  ,"; 
-                    }
-                    std::cout << std::endl;
+                    // LOG(INFO) << "Finding a backend for the following dispatch size format:" << std::endl;
+                    // for (auto& s: targetSize.outputSize) {
+                    //     std::cout << s.x << "|" << s.y << "  ,"; 
+                    // }
+                    // std::cout << std::endl;
 
-                    for (auto& s: targetSize.elwiseSize) {
-                        std::cout << s.x << "|" << s.y << "  ,"; 
-                    }
-                    std::cout << std::endl;
+                    // for (auto& s: targetSize.elwiseSize) {
+                    //     std::cout << s.x << "|" << s.y << "  ,"; 
+                    // }
+                    // std::cout << std::endl;
 
-                    for (auto& s: targetSize.containerSize) {
-                        std::cout << s.x << "|" << s.y << "  ,"; 
-                    }
-                    std::cout << std::endl;
+                    // for (auto& s: targetSize.containerSize) {
+                    //     std::cout << s.x << "|" << s.y << "  ,"; 
+                    // }
+                    // std::cout << std::endl;
                     
-                    for (auto& s: targetSize.uniformSize) {
-                        std::cout << s.x << "|" << s.y << "  ,"; 
-                    }
-                    std::cout << std::endl;
+                    // for (auto& s: targetSize.uniformSize) {
+                    //     std::cout << s.x << "|" << s.y << "  ,"; 
+                    // }
+                    // std::cout << std::endl;
 
                     
                     for (auto& model: models) 
                     {
                         if(model == targetSize) 
                         {
-                            LOG(INFO) << "Backend found for dispatch size format!" << std::endl;
+                            LOG(INFO) << "Backend " << model.backend << " found and will be used for the current dispatch size format!" << std::endl;
                             return BackendSpec(model.backend);
                         }
                     }

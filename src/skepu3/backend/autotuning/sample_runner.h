@@ -32,7 +32,7 @@ namespace skepu
                 void run(SampleVec& data, std::vector<BackendSpec>& specs, ExecutionPlan& plan) {
                     
                     std::pair<Backend::Type, benchmark::TimeSpan> bestDuration{Backend::Type::CPU, benchmark::TimeSpan::max()};
-                    LOG(INFO) << "Argument category size should be four: " << data.size() << std::endl;
+                    LOG(DEBUG) << "Argument category size should be four: " << data.size() << std::endl;
                     auto args = sampler.sample(
                                 data,
                                 pack_indices<OI...>(), 

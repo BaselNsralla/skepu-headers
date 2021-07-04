@@ -81,15 +81,15 @@ namespace skepu
                 LOG(INFO) << "Sampling is DONE!" << std::endl;
 
                 //========= NEW == Prints dimensions
-                using dims = typename ArgDimInit<Skeleton>::type; 
-                using ret  = typename dims::ret_dim;
-                using el   = typename dims::elwise_dim;
-                using cont = typename dims::cont_dim;
-                using uni  = typename dims::uni_dim;
-                arg_dim_printer(ret());
-                arg_dim_printer(el());
-                arg_dim_printer(cont());
-                arg_dim_printer(uni());
+                // using dims = typename ArgDimInit<Skeleton>::type; 
+                // using ret  = typename dims::ret_dim;
+                // using el   = typename dims::elwise_dim;
+                // using cont = typename dims::cont_dim;
+                // using uni  = typename dims::uni_dim;
+                // arg_dim_printer(ret());
+                // arg_dim_printer(el());
+                // arg_dim_printer(cont());
+                // arg_dim_printer(uni());
                 //=========
 
 

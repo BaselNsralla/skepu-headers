@@ -9,7 +9,7 @@ enum LogType
     INFO,
     WARN,
     ERROR,
-    TRACE,
+    DEBUG,
     TODO,
     NOTE
 };
