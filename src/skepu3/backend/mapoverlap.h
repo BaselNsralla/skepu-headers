@@ -240,26 +240,26 @@ namespace skepu
 					get_size(TuneableT::tune_limit(), ciArgTup,  gen_seq<std::tuple_size<decltype(ciArgTup)>::value>())
 				};
 
-				std::cout << "INSERTED DATA " << std::endl;
-				for (auto& s: targetSize.outputSize) {
-					std::cout << s.x << "|" << s.y << "  ,"; 
-				}
-				std::cout << std::endl;
+				// std::cout << "INSERTED DATA " << std::endl;
+				// for (auto& s: targetSize.outputSize) {
+				// 	std::cout << s.x << "|" << s.y << "  ,"; 
+				// }
+				// std::cout << std::endl;
 
-				for (auto& s: targetSize.elwiseSize) {
-					std::cout << s.x << "|" << s.y << "  ,"; 
-				}
-				std::cout << std::endl;
+				// for (auto& s: targetSize.elwiseSize) {
+				// 	std::cout << s.x << "|" << s.y << "  ,"; 
+				// }
+				// std::cout << std::endl;
 
-				for (auto& s: targetSize.containerSize) {
-					std::cout << s.x << "|" << s.y << "  ,"; 
-				}
-				std::cout << std::endl;
+				// for (auto& s: targetSize.containerSize) {
+				// 	std::cout << s.x << "|" << s.y << "  ,"; 
+				// }
+				// std::cout << std::endl;
 				
-				for (auto& s: targetSize.uniformSize) {
-					std::cout << s.x << "|" << s.y << "  ,"; 
-				}
-				std::cout << std::endl;
+				// for (auto& s: targetSize.uniformSize) {
+				// 	std::cout << s.x << "|" << s.y << "  ,"; 
+				// }
+				// std::cout << std::endl;
 
 
 				this->selectBackend(targetSize);
