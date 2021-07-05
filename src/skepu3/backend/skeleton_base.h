@@ -76,13 +76,12 @@ namespace skepu
 			const BackendSpec& selectBackend(autotune::DispatchSize size)
 			{
 
-				if  (this->m_tunePlan) {//this->m_tunePlan) {
-					setBackend(this->m_tunePlan->optimalBackend(size));
+					//setBackend(this->m_tunePlan->optimalBackend(size, *this->m_user_spec));
+				if  (this->m_tunePlan) //this->m_tunePlan) {
+					this->m_selected_spec = this->m_tunePlan->optimalBackend(size);
+				if (this->m_user_spec && !m_selected_spec)
 					this->m_selected_spec = this->m_user_spec;
-				}
-				else if (this->m_user_spec)
-					this->m_selected_spec = this->m_user_spec;
-				else if (this->m_execPlan)
+				else if (this->m_execPlan && !m_selected_spec)
 					this->m_selected_spec = &this->m_execPlan->find(size.legacy);
 				else
 					this->m_selected_spec = &internalGlobalBackendSpecAccessor();

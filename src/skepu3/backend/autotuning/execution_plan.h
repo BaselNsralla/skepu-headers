@@ -12,6 +12,7 @@
 #include <skepu3/backend/autotuning/arg_sequence.h>
 #include <skepu3/backend/autotuning/dispatch_size.h>
 #include <skepu3/backend/logging/logger.h>
+#include <skepu3/backend/autotuning/arg_dimension.h>
 // for convenience
 using json = nlohmann::json;
 
@@ -99,20 +100,25 @@ namespace skepu
 
             };
 
+
             using ModelVec = std::vector<SizeModel>;
 
 
-            class ExecutionPlan
+            struct ExecutionPlan
             {
                 //BackendRanges ranges;
+//        public:
+                string id;
+                Dimensionality dims;
                 ModelVec models;
                 string filename;
-                
-        public:
+
+                ExecutionPlan() {}
+                ExecutionPlan(string id, Dimensionality dims) :  id{id}, dims{dims} {}
+
                 static bool exist(ExecutionPlan& plan, string compileId,  string tuneId);
                 static void persist(ExecutionPlan& plan,  string tuneId);
 
-                string id;
 
                 void clear() {
                     models.clear();
@@ -152,7 +158,7 @@ namespace skepu
                 //     */
                 // }
 
-                BackendSpec optimalBackend(DispatchSize& targetSize)
+                BackendSpec* optimalBackend(DispatchSize& targetSize)
                 {
                     // NOTE: Dispatched size kommer ha samma vector size på varje argument.
                     // LOG(INFO) << "Finding a backend for the following dispatch size format:" << std::endl;
@@ -176,17 +182,18 @@ namespace skepu
                     // }
                     // std::cout << std::endl;
 
-                    
+                    targetSize.matchDimensions(dims);
+
                     for (auto& model: models) 
                     {
                         if(model == targetSize) 
                         {
                             LOG(INFO) << "Backend " << model.backend << " found and will be used for the current dispatch size format!" << std::endl;
-                            return BackendSpec(model.backend);
+                            return new BackendSpec(model.backend);
                         }
                     }
-                    LOG(WARN) << "Backend was not found for dispatch size format, will fallback to CPU!" << std::endl;
-                    return BackendSpec(Backend::Type::CPU);
+                    LOG(WARN) << "Backend was not found for dispatch size format, will fallback to user backend!" << std::endl;
+                    return nullptr; //BackendSpec(Backend::Type::CPU);
                 }
                 
                 friend ExecutionPlan& operator>>(istream& is,  ExecutionPlan& executionPlan);
@@ -249,11 +256,25 @@ namespace skepu
                 SampleVec sample = j["sample"];
                 sm.sample        = std::move(sample); //j["sample"];
                 sm.time_count    = j["time"];
+                
             } 
+
+            void from_json(json const& j, Dimensionality& d)
+            {
+                //j = json{{"return", d.ret}, {"elementWise", d.elwise}, {"container", d.container}, {"uniform", d.uniform}};
+                d.ret       = j["return"].get<typename Dimensionality::DimUnit>();
+                d.elwise    = j["elementWise"].get<typename Dimensionality::DimUnit>();
+                d.container = j["container"].get<typename Dimensionality::DimUnit>();
+                d.uniform   = j["uniform"].get<typename Dimensionality::DimUnit>();
+            }
 
             void from_json(json const& j, ExecutionPlan& ep)
             {
                 ep.id     = j["compilationId"];
+                Dimensionality dims;
+                from_json(j["dimensions"], dims);
+                //dims = j["dimensions"];//.get<Dimensionality>();
+                ep.dims = std::move(dims);
                 std::vector<SizeModel> models;
                 for (auto& modelJson : j["models"]) 
                 {
@@ -265,17 +286,25 @@ namespace skepu
                 ep.models = std::move(models);
             } 
 
+            void to_json(json& j, Dimensionality const& d)
+            {
+                j = json{{"return", d.ret}, {"elementWise", d.elwise}, {"container", d.container}, {"uniform", d.uniform}};
+            }
+
             void to_json(json& j,  SizeModel const& sm) 
             {
                 std::ostringstream oss;
                 oss << sm.backend;
 
-                j = json{{"backend", oss.str()}, {"time", sm.time_count} ,{"sample", sm.sample}};
+                j = json{{"backend", oss.str()}, {"time", sm.time_count} , {"sample", sm.sample}};
             }
+
 
             void to_json(json& j, ExecutionPlan const& ep) 
             {
-                j = json{{"compilationId", ep.id}, {"models", ep.models}};
+                json jdims;
+                 to_json(jdims, ep.dims);
+                j = json{{"compilationId", ep.id}, {"dimensions", jdims }, {"models", ep.models}};
             }
 
         }

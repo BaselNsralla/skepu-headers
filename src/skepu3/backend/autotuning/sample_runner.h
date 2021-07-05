@@ -32,7 +32,7 @@ namespace skepu
                 void run(SampleVec& data, std::vector<BackendSpec>& specs, ExecutionPlan& plan) {
                     
                     std::pair<Backend::Type, benchmark::TimeSpan> bestDuration{Backend::Type::CPU, benchmark::TimeSpan::max()};
-                    LOG(DEBUG) << "Argument category size should be four: " << data.size() << std::endl;
+                    //LOG(DEBUG) << "Argument category size should be four: " << data.size() << std::endl;
                     auto args = sampler.sample(
                                 data,
                                 pack_indices<OI...>(), 
@@ -87,12 +87,25 @@ namespace skepu
                         return BackendSpec(type);
                     });
                     
-                    ExecutionPlan plan{};
-                    if(ExecutionPlan::exist(plan, STRINGIFY(COMPILATIONID), sampler.skeleton.tuneId))
+                    // TODO exist
+                    ExecutionPlan planA{};
+                    if(ExecutionPlan::exist(planA, STRINGIFY(COMPILATIONID), sampler.skeleton.tuneId))
                     {
-                        return plan;
+                        return planA;
                     }
                     
+                    ExecutionPlan plan {
+                        STRINGIFY(COMPILATIONID),
+                        Dimensionality {
+                            ArgDimType::ret_dim::toVector(),
+                            ArgDimType::elwise_dim::toVector(),
+                            ArgDimType::cont_dim::toVector(),
+                            ArgDimType::uni_dim::toVector()
+                        }
+                    };
+
+
+                    //plan.setSearchDimension() Tror det är bättre med konstruktor då vi behöver den alltid för consitency
                     auto allSamples = generate_sequence(sampler.skeleton, 
                                                         typename ArgDimType::ret_dim(),
                                                         typename ArgDimType::elwise_dim(),

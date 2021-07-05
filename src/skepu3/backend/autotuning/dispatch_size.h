@@ -3,10 +3,11 @@
 #include <tuple>
 #include <vector>
 #include <skepu3/backend/environment.h>
-#include <skepu3/backend/autotuning/execution_plan.h>
+//#include <skepu3/backend/autotuning/execution_plan.h>
 #include <skepu3/backend/autotuning/size.h>
 #include <functional>
 #include <skepu3/backend/autotuning/tune_limit.h>
+#include <skepu3/backend/autotuning/arg_dimension.h>
 
 namespace skepu
 {
@@ -14,6 +15,17 @@ namespace skepu
 	{
 		namespace autotune 
 		{
+
+
+			namespace AT = autotune;
+			static const size_t Max_Dim = 2;
+			using DimTransformer = std::function<AT::Size(AT::Size const&)>;
+				
+			inline AT::Size toOneDim(AT::Size const& md) {
+				size_t y = md.y == 0 ? 1 : md.y; // TODO Extending Size to more dimensions will require additional checks
+				return AT::Size{md.y * md.x, 0};
+			};
+
 			struct args_tuple_base 
 			{
 				static std::tuple<> empty() { return std::tuple<>(); } 
@@ -63,7 +75,7 @@ namespace skepu
 			template<size_t... Is>
 			struct gen_seq<0, Is...> : seq<Is...> { };
 
-			namespace AT = autotune;
+			
 
 			using AltSizeFunc = std::function<AT::Size(void)>;
 
@@ -152,15 +164,40 @@ namespace skepu
 					return d;
 				}
 				
-				void collapseDimension(std::vector<AT::Size>& someArg) 
+				
+			
+				void collapseDimension(std::vector<AT::Size>& someArg, DimTransformer transformer = toOneDim) 
 				{
 					std::vector<AT::Size> collapsed(someArg.size());
-					std::transform(someArg.begin(), someArg.end(), collapsed.begin(), [] (AT::Size const& multiDim) {
-						size_t y = multiDim.y == 0 ? 1 : multiDim.y;
-						return AT::Size{multiDim.y*multiDim.x, 0};
-					});
-
+					std::transform(someArg.begin(), someArg.end(), collapsed.begin(), toOneDim);
 					someArg = std::move(collapsed);
+				}
+
+				void matchArgDimensions(typename Dimensionality::DimUnit const& dims, std::vector<AT::Size>& sizes)
+				{
+					if (!(dims.size() == 0 && sizes.size() == 1) && dims.size() != sizes.size()) {
+						LOG(WARN) << "Incompatible input data and autotune parameter deduction \n" 
+								  << "Dimensions size is " << dims.size() << " Expected to match "
+								  << "Dispatch argument size " << sizes.size()
+								  << std::endl;
+					}
+					for(size_t i = 0; i < dims.size() && i < sizes.size(); ++i) 
+					{
+						auto dim_value = dims[i];
+						if (dim_value == Max_Dim) {
+							continue;
+						} else {
+							sizes[i] = toOneDim(sizes[i]);
+						}
+					}
+
+				}
+
+				void matchDimensions(Dimensionality const& dims) {
+					matchArgDimensions(dims.ret,       outputSize);
+					matchArgDimensions(dims.elwise,    elwiseSize);
+					matchArgDimensions(dims.container, containerSize);
+					matchArgDimensions(dims.uniform,   uniformSize);
 				}
 
 			};

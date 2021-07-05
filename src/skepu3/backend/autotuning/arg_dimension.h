@@ -59,7 +59,15 @@ namespace skepu
     };
 
     template<size_t... dims>
-    struct Dimensions {};
+    struct Dimensions {
+        static std::vector<size_t> toVector()
+        {
+            std::vector<size_t> result{dims...};
+            return result;
+            //context { (result.push_back(dims), 0)...};
+        }
+
+    };
 
 
     // template<typename A, typename B, typename C, typename D>
@@ -173,7 +181,9 @@ namespace skepu
 
     template<typename Skeleton>
     struct ArgDim<Skeleton, SkeletonType::Map> {
-        using ret_dim    = typename master_deduced_dimensionality<typename Skeleton::ResultArg, typename Skeleton::ElwiseArgs>::type; // TODO: This could make it slower  if elwise is bigger than return args
+        using ret_dim    = typename master_deduced_dimensionality<
+                                typename Skeleton::ResultArg, 
+                                typename Skeleton::ElwiseArgs>::type; // TODO: This could make it slower  if elwise is bigger than return args
         using elwise_dim = typename deduced_dimensionality<typename Skeleton::ElwiseArgs>::type; 
         using cont_dim   = typename deduced_dimensionality<typename Skeleton::ContainerArgs>::type; 
         using uni_dim    = typename deduced_dimensionality<typename Skeleton::UniformArgs>::type; 
@@ -199,5 +209,15 @@ namespace skepu
         //using type = Skeleton::skeletonType == SkeletonType::MapOverlap2D ? MapOverlap2DArg
         using type = ArgDim<Skeleton, Skeleton::skeletonType>;
     };
+
+    struct Dimensionality 
+    {
+        using DimUnit = std::vector<size_t>;
+        DimUnit ret;
+        DimUnit elwise;
+        DimUnit container;
+        DimUnit uniform;
+    };
+
 
 };
