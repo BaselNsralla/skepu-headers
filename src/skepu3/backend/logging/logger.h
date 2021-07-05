@@ -64,8 +64,26 @@ struct LOG
                             << termcolor::cyan;
             };
             break;
+        case DEBUG:
+            header = []() {
+                std::cout << termcolor::on_bright_yellow 
+                            << termcolor::bold 
+                            << "DEBUG:"
+                            << termcolor::reset
+                            << " "
+                            << termcolor::bright_yellow;
+            };
+            break;
         case NOTE:
-            /* code */
+            header = []() {
+                std::cout << termcolor::on_bright_blue 
+                            << termcolor::bold 
+                            << "NOTE:"
+                            << termcolor::reset
+                            << " "
+                            << termcolor::bright_blue;
+            };
+            break;
             break;
 
         default:
