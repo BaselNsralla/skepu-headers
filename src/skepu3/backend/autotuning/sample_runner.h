@@ -45,6 +45,7 @@ namespace skepu
                     //TODO Rest of sampling
                     benchmark::measureForEachBackend(repeats, size, specs, 
                         [&](size_t, BackendSpec spec) {
+                            LOG(INFO) << "Running on backend " << spec.getType() << std::endl;
                             sampler.skeleton.setBackend(spec);
                             sampler.skeleton(
                                 std::get<OI>(args.resultArg)..., // sprider eftersom OI är en pack
@@ -78,15 +79,7 @@ namespace skepu
                 }
 
                 template<class ArgDimType>
-                ExecutionPlan start() {
-                    auto backendTypes = Backend::availableTypes();
-
-                    std::vector<BackendSpec> specs(backendTypes.size());
-
-                    std::transform(backendTypes.begin(), backendTypes.end(), specs.begin(), [](Backend::Type& type) {
-                        return BackendSpec(type);
-                    });
-                    
+                ExecutionPlan start(std::vector<BackendSpec>& specs) {                    
                     // TODO exist
                     ExecutionPlan planA{};
                     if(ExecutionPlan::exist(planA, STRINGIFY(COMPILATIONID), sampler.skeleton.tuneId))

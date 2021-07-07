@@ -55,7 +55,7 @@ namespace skepu
             // using ConditionalSampler = typename std::conditional<isMapOverlap<Skeleton>::value, MapOverlapSampler<Skeleton>, ASampler<Skeleton>>::type;
 
             template<typename Skeleton, size_t... OI, size_t... EI, size_t... CI, size_t... UI>
-            ExecutionPlan sampling(Skeleton& skeleton, pack_indices<OI...> oi, pack_indices<EI...> ei, pack_indices<CI...> ci, pack_indices<UI...> ui) 
+            ExecutionPlan sampling(Skeleton& skeleton, std::vector<BackendSpec>& specs, pack_indices<OI...> oi, pack_indices<EI...> ei, pack_indices<CI...> ci, pack_indices<UI...> ui) 
             {
                 
                 /*
@@ -66,6 +66,7 @@ namespace skepu
                 print_index<UI...>::print();
                 std::cout << "OI, EI, CI, UI" << std::endl;
                 */
+            
 
                 using SRT = ASampler<Skeleton>; // ConditionalSampler<Skeleton>;
                 LOG(INFO) << "Skeleton sampling started" << std::endl;
@@ -77,9 +78,6 @@ namespace skepu
                     pack_indices<UI...>> runner{SRT(skeleton)};
                         
                 using Dims = typename ArgDimInit<Skeleton>::type; 
-                auto plan = runner.template start<Dims>();
-                LOG(INFO) << "Sampling is DONE!" << std::endl;
-
                 //========= NEW == Prints dimensions
                 // using dims = typename ArgDimInit<Skeleton>::type; 
                 // using ret  = typename dims::ret_dim;
@@ -91,15 +89,19 @@ namespace skepu
                 // arg_dim_printer(cont());
                 // arg_dim_printer(uni());
                 //=========
+                auto plan = runner.template start<Dims>(specs);
+                LOG(INFO) << "Sampling is DONE!" << std::endl;
+
 
 
                 return plan;
             }
 
             template<typename Skeleton>
-            ExecutionPlan samplingWrapper(Skeleton&  skeleton) {
+            ExecutionPlan samplingWrapper(Skeleton&  skeleton, std::vector<BackendSpec>& specs) {
                 return sampling(
                     skeleton,
+                    specs,
                     typename make_pack_indices<std::tuple_size<typename Skeleton::ResultArg>::value>::type(),
                     typename make_pack_indices<std::tuple_size<typename Skeleton::ElwiseArgs>::value>::type(),
                     typename make_pack_indices<std::tuple_size<typename Skeleton::ContainerArgs>::value>::type(),

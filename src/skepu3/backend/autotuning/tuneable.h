@@ -9,12 +9,28 @@
 #include <thread>
 #include <skepu3/backend/logging/logger.h>
 #include <skepu3/backend/autotuning/tune_limit.h>
+#include <fstream>
+#include <skepu3/backend/autotuning/custom_spec.h>
+#include <skepu3/external/json.hpp>
+using json = nlohmann::json;
+
 namespace skepu 
 {
     namespace backend 
     {
         namespace autotune 
         {
+            enum class BackendSpecInputType {
+                available, custom
+            };
+
+            struct BackendSpecInput {
+                BackendSpecInput()  {}
+                BackendSpecInput(std::string filePath): filePath{filePath}, type{BackendSpecInputType::custom} {}
+                std::string filePath;
+                BackendSpecInputType type = BackendSpecInputType::available;
+            };
+
             enum class TuneExecutionPolicy 
             {
                 async,
@@ -52,7 +68,30 @@ namespace skepu
                     return std::this_thread::get_id() == tuningThreadId;
                 }
 
-
+                // TODO: Kan göra det här i strukten för BackendSpecInput
+                std::vector<BackendSpec> resolveBackendSpecs(BackendSpecInput specInput) 
+                {
+                    if (specInput.type == BackendSpecInputType::custom)
+                    {
+                        std::ifstream file(specInput.filePath);
+                        auto j = json::parse(file);
+                        std::vector<CustomSpec> cspecs = j["backendSpecs"];
+                        std::vector<BackendSpec> specs(cspecs.size());
+                        std::transform(cspecs.begin(), cspecs.end(), specs.begin(), [](CustomSpec& customSpec) {
+                            return CustomSpec::toBackendSpec(customSpec);
+                        });
+                        return specs;
+                    } else {
+                        auto backendTypes = Backend::availableTypes();
+                        
+                        // Custom specs?
+                        std::vector<BackendSpec> specs(backendTypes.size());
+                        std::transform(backendTypes.begin(), backendTypes.end(), specs.begin(), [](Backend::Type& type) {
+                            return BackendSpec(type);
+                        });
+                        return specs;
+                    }
+                }
 
             public:
                 SampleLimit tune_limit() 
@@ -60,19 +99,20 @@ namespace skepu
                     return sample_quota;
                 }
                 //static const long long tuneId = Incremental<long>::value;//::next(); 
-                void autotuning(Quota quota = Quota::LOW, TuneExecutionPolicy policy = TuneExecutionPolicy::seq) 
+                void autotuning(Quota quota = Quota::LOW, BackendSpecInput specInput = BackendSpecInput(), TuneExecutionPolicy policy = TuneExecutionPolicy::seq) 
                 {   
                     // TODO: switch tuneType
                     sample_quota = SampleQuota(quota);
                     active = true;
+                    auto specs = resolveBackendSpecs(specInput);
                     Skeleton& skeleton = *(static_cast<Skeleton*>(this));
         
                     if (policy == TuneExecutionPolicy::async) 
                     {
                         future = promise.get_future();
                         // TODO: SET value on thread exit instead
-                        std::thread thread = std::thread( [&skeleton] { 
-                            skeleton.promise.set_value(samplingWrapper(skeleton)); 
+                        std::thread thread = std::thread( [&skeleton, &specs] { 
+                            skeleton.promise.set_value(samplingWrapper(skeleton, specs)); 
                             skeleton.useTuning.store(true); 
                         });
                         
@@ -86,10 +126,9 @@ namespace skepu
                     } else 
                     {
                         future = promise.get_future();
-                        promise.set_value(samplingWrapper(skeleton));
+                        promise.set_value(samplingWrapper(skeleton, specs));
                         skeleton.useTuning.store(true);
                     }
-
                 }
 
                 bool finalizeTuning() 

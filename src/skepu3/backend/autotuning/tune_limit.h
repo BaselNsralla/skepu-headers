@@ -28,7 +28,7 @@ namespace skepu {
     {
         switch(cap) {
             case Quota::LOW:
-                return SampleLimit{15, 13, 24};
+                return SampleLimit{7, 7, 24};
                 //return SampleLimit{8, 6, 24};
                 break;
             case Quota::MEDIUM:
