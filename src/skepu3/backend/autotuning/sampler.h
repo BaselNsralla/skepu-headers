@@ -363,6 +363,7 @@ namespace skepu
                         //if (sizeof...(Ts) == 0) 
                         //{
                             skeleton.setOverlap(1,1);
+                            skeleton.setEdgeMode(skepu::Edge::Duplicate);
                         //} else {
                         //    skeleton.setOverlap(std::get<0>(args), std::get<0>(args));
                         //}
