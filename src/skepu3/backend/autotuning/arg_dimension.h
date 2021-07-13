@@ -163,7 +163,7 @@ namespace skepu
     };
     // ================================================
 
-    template<typename Skeleton, SkeletonType skeletonType>
+    template<typename Skeleton, SkeletonType skeletonType, bool prefersMatrix = Skeleton::prefers_matrix>
     struct ArgDim {
         using ret_dim    = typename deduced_dimensionality<typename Skeleton::ResultArg>::type; 
         using elwise_dim = typename deduced_dimensionality<typename Skeleton::ElwiseArgs>::type; 
@@ -171,8 +171,8 @@ namespace skepu
         using uni_dim    = typename deduced_dimensionality<typename Skeleton::UniformArgs>::type; 
     };
 
-    template<typename Skeleton>
-    struct ArgDim<Skeleton, SkeletonType::MapOverlap2D> {
+    template<typename Skeleton, bool prefersMatrix>
+    struct ArgDim<Skeleton, SkeletonType::MapOverlap2D, prefersMatrix> {
         using ret_dim    = typename defined_dimensionality<typename Skeleton::ResultArg,  2>::type; 
         using elwise_dim = typename defined_dimensionality<typename Skeleton::ElwiseArgs, 2>::type; 
         using cont_dim   = typename deduced_dimensionality<typename Skeleton::ContainerArgs>::type; 
@@ -180,7 +180,7 @@ namespace skepu
     };
 
     template<typename Skeleton>
-    struct ArgDim<Skeleton, SkeletonType::Map> {
+    struct ArgDim<Skeleton, SkeletonType::Map, false> {
         using ret_dim    = typename master_deduced_dimensionality<
                                 typename Skeleton::ResultArg, 
                                 typename Skeleton::ElwiseArgs>::type; // TODO: This could make it slower  if elwise is bigger than return args
@@ -188,6 +188,15 @@ namespace skepu
         using cont_dim   = typename deduced_dimensionality<typename Skeleton::ContainerArgs>::type; 
         using uni_dim    = typename deduced_dimensionality<typename Skeleton::UniformArgs>::type; 
     };
+
+    template<typename Skeleton>
+    struct ArgDim<Skeleton, SkeletonType::Map, true> {
+        using ret_dim    = typename defined_dimensionality<typename Skeleton::ResultArg,  2>::type; 
+        using elwise_dim = typename defined_dimensionality<typename Skeleton::ElwiseArgs, 2>::type; 
+        using cont_dim   = typename deduced_dimensionality<typename Skeleton::ContainerArgs>::type; 
+        using uni_dim    = typename deduced_dimensionality<typename Skeleton::UniformArgs>::type; 
+    };
+
 
     struct ArgDimReduce 
     {
@@ -197,11 +206,11 @@ namespace skepu
         using uni_dim    = Dimensions<>;//typename deduced_dimensionality<typename Skeleton::UniformArgs>::type; 
     };
 
-    template<typename Skeleton>
-    struct ArgDim<Skeleton, SkeletonType::Reduce1D>: ArgDimReduce {};
+    template<typename Skeleton, bool prefersMatrix>
+    struct ArgDim<Skeleton, SkeletonType::Reduce1D, prefersMatrix>: ArgDimReduce {};
 
-    template<typename Skeleton>
-    struct ArgDim<Skeleton, SkeletonType::Reduce2D>: ArgDimReduce {};
+    template<typename Skeleton, bool prefersMatrix>
+    struct ArgDim<Skeleton, SkeletonType::Reduce2D, prefersMatrix>: ArgDimReduce {};
 
     template<typename Skeleton>
     struct ArgDimInit
