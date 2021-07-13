@@ -187,7 +187,7 @@ namespace skepu
 						if (dim_value == Max_Dim) {
 							continue;
 						} else {
-							sizes[i] = toOneDim(sizes[i]);
+							sizes[i] = toOneDim(sizes[i]); // toOneDim så länge dimvalue inte är (2)
 						}
 					}
 

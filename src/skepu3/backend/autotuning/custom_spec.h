@@ -79,35 +79,6 @@ namespace skepu
                 default:
                     break;
                 }
-
-
-                // spec.devices     = j.find("devices")    != j.end() ? j["devices"].get<size_t>()    : BackendSpec::defaultNumDevices;
-                // spec.gpuThreads  = j.find("gpuThreads") != j.end() ? j["gpuThreads"].get<size_t>() : BackendSpec::defaultGPUThreads;
-                // spec.blocks      = j.find("blocks")     != j.end() ? j["blocks"].get<size_t>()     : BackendSpec::defaultGPUBlocks;
-                // if(j.find("cpuThreads") != j.end())
-                // {
-                //     spec.cpuThreads =  j["cpuThreads"].get<size_t>();
-                // } else 
-                // {
-                //     #ifdef SKEPU_OPENMP
-                //         size_t m_CPUThreads {(size_t)omp_get_max_threads()};
-                //     #else
-                //         size_t m_CPUThreads {BackendSpec::defaultCPUThreads};
-                //     #endif
-                // }
-
-                // if(j.find("openmpScheduling") != j.end())
-                // {        
-                //     std::string type;
-                //     j.at("opempScheduling").get_to(type);
-                //     spec.openmpScheduling = Backend::schedulingTypeFromString(type);
-                // } else 
-                // {
-                //     spec.openmpScheduling = Backend::Scheduling::Static;
-                // }
-
-                // spec.openmpChunk = j.find("openmpChunk") != j.end() ? j["openmpChunk"].get<size_t>() : Backend::chunkSizeDefault;
-
             }
 
         }
