@@ -23,7 +23,7 @@ namespace skepu {
             return std::pow(single_dim, 1/dim);
         }
     };
-
+    // TODO: (IMPORTANT) Should be generated from a file in the future
     static SampleLimit SampleQuota(Quota cap) 
     {
         switch(cap) {
@@ -32,10 +32,10 @@ namespace skepu {
                 //return SampleLimit{8, 6, 24};
                 break;
             case Quota::MEDIUM:
-                return SampleLimit{18, 15, 24};
+                return SampleLimit{15, 10, 24};
                 break;
             case Quota::HIGH:
-                return SampleLimit{20, 17, 24};
+                return SampleLimit{20, 10, 24};
                 break;
         };
         return SampleLimit{15, 13, 24};
