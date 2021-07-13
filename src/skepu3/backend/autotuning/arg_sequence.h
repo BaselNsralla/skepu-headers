@@ -496,7 +496,6 @@ namespace skepu
                                         Dimensions<cont...>,
                                         Dimensions<uni...>) 
                 {   
-                    LOG(INFO) << "Generating all argument sequences..." << std::endl;
                     ArgSequence argSeq = configured_sequence(
                         limit,
                         Permutation<
@@ -505,7 +504,6 @@ namespace skepu
                             Single<Ultra<Dimensions<uni...>>>
                         >()
                     );
-                    LOG(INFO) << "Sequence generation DONE!" << std::endl;
                     return argSeq;
                 }
 
@@ -517,7 +515,7 @@ namespace skepu
                                         Dimensions<cont...>,
                                         Dimensions<uni...>) 
                 {   
-                    LOG(INFO) << "Generating all argument sequences..." << std::endl;
+                   
                     ArgSequence argSeq = configured_sequence(
                         limit,
                         Permutation<
@@ -527,7 +525,6 @@ namespace skepu
                             Single<Ultra<Dimensions<uni...>>>
                         >()
                     );
-                    LOG(INFO) << "Sequence generation DONE!" << std::endl;
                     return argSeq;
                 }
 
@@ -545,7 +542,6 @@ namespace skepu
                                         Dimensions<cont...>,
                                         Dimensions<uni...>) 
                 {   
-                    LOG(INFO) << "Generating all argument sequences..." << std::endl;
                     ArgSequence argSeq = configured_sequence(
                         limit,
                         Permutation<
@@ -555,7 +551,7 @@ namespace skepu
                             Single<Ultra<Dimensions<uni...>>>
                         >()
                     );
-                    LOG(INFO) << "Sequence generation DONE!" << std::endl;
+                    
                     return argSeq;
                 }
             };
@@ -582,9 +578,9 @@ namespace skepu
                                          Dimensions<cont...> c,
                                          Dimensions<uni...> u) {
                 //Group<Standard<typename Skeleton::ResultArg>, Standard< typename Skeleton::ElwiseArgs>>,
-                
+                LOG(INFO) << "Generating all argument sequences..." << std::endl;
                 ArgSequence argSeq = generate_sequence_impl<Skeleton::skeletonType>::generate(skeleton.tune_limit(), r, e, c, u);
-
+                LOG(INFO) << "Sequence generation DONE!" << std::endl;
                 // std::ofstream ostrm("sequences.json", std::ios::trunc);
                 // ostrm << "DONE SAMPLING " << argSeq.input.size() << std::endl;
                 // for (auto& a: argSeq.samples) 
