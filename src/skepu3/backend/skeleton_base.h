@@ -83,9 +83,9 @@ namespace skepu
 					this->m_selected_spec = this->m_user_spec;
 				else if (this->m_execPlan && !m_selected_spec)
 					this->m_selected_spec = &this->m_execPlan->find(size.legacy);
-				else
+				else if (!m_selected_spec)
 					this->m_selected_spec = &internalGlobalBackendSpecAccessor();
-				
+				else {}
 			//	this->m_selected_spec = (this->m_user_spec != nullptr)
 			//		? this->m_user_spec
 			//		: &this->m_execPlan->find(size);
@@ -97,7 +97,7 @@ namespace skepu
 
 
 
-		protected:
+		public:
 			SkeletonBase()
 			{
 				this->m_environment = Environment<int>::getInstance();
