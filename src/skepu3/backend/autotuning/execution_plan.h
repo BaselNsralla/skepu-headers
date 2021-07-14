@@ -183,17 +183,29 @@ namespace skepu
                     // std::cout << std::endl;
 
                     targetSize.matchDimensions(dims);
-
-                    for (auto& model: models) 
+                    BackendSpec* backendSpec = nullptr;
+                    auto timeTakenStep1 = skepu::benchmark::measureExecTime([&]
                     {
-                        if(model == targetSize) 
+
+                        for (auto& model: models) 
                         {
-                            LOG(INFO) << "Backend " << model.backend << " found and will be used for the current dispatch size format!" << std::endl;
-                            return new BackendSpec(model.backend);
+                            if(model == targetSize) 
+                            {
+                                LOG(INFO) << "Backend " << model.backend << " found and will be used for the current dispatch size format!" << std::endl;
+                                backendSpec = new BackendSpec(model.backend);
+                                break;
+                            }
                         }
-                    }
-                    LOG(WARN) << "Backend was not found for dispatch size format, will fallback to user backend!" << std::endl;
-                    return nullptr; //BackendSpec(Backend::Type::CPU);
+                    });
+                    
+                    LOG(INFO) << "Time take to find a backend from execution plan " << (timeTakenStep1.count() / 10E6) << " Seconds" <<  std::endl;
+                    
+                    if (backendSpec == nullptr) 
+                    {
+                        LOG(WARN) << "Backend was not found for dispatch size format, will fallback to user backend!" << std::endl;
+                    }    
+                    
+                    return backendSpec; //BackendSpec(Backend::Type::CPU);
                 }
                 
                 friend ExecutionPlan& operator>>(istream& is,  ExecutionPlan& executionPlan);
