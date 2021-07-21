@@ -39,6 +39,22 @@ namespace skepu
 {
 	namespace backend 
 	{
+
+        class UniqueID {
+        protected:
+            static size_t nextID;
+        public:
+            int id;
+            UniqueID() {
+                id = ++nextID;
+            };
+            size_t get() {
+                return id;
+            }
+        };
+
+        size_t UniqueID::nextID = 0;
+
         namespace autotune
         {
             using SizeRange     = std::pair<size_t, size_t>;
@@ -58,6 +74,7 @@ namespace skepu
                 Backend::Type backend;
                 int64_t time_count;
                 SampleVec sample;
+                size_t id = UniqueID().get();
 
                 SizeModel() {}
 
@@ -74,7 +91,9 @@ namespace skepu
                         Size& b_size = *itb;
                         bool local_equal = a_size.equal(b_size, EQUALITY_TOLERANCE);
                         equal = equal && local_equal;
-        
+                        if (equal == false) {
+                            break;
+                        }
                     }
                     //std::cout << " " << std::endl;
                     return equal;
@@ -160,7 +179,9 @@ namespace skepu
 
                 BackendSpec* optimalBackend(DispatchSize& targetSize)
                 {
-                    // NOTE: Dispatched size kommer ha samma vector size på varje argument.
+                    // NOTE: Dispatched size kommer ha samma vector size på varje argument. Always right
+
+                    targetSize.matchDimensions(dims);
                     // LOG(INFO) << "Finding a backend for the following dispatch size format:" << std::endl;
                     // for (auto& s: targetSize.outputSize) {
                     //     std::cout << s.x << "|" << s.y << "  ,"; 
@@ -181,8 +202,6 @@ namespace skepu
                     //     std::cout << s.x << "|" << s.y << "  ,"; 
                     // }
                     // std::cout << std::endl;
-
-                    targetSize.matchDimensions(dims);
                     BackendSpec* backendSpec = nullptr;
                     auto timeTakenStep1 = skepu::benchmark::measureExecTime([&]
                     {
@@ -191,7 +210,7 @@ namespace skepu
                         {
                             if(model == targetSize) 
                             {
-                                LOG(INFO) << "Backend " << model.backend << " found and will be used for the current dispatch size format!" << std::endl;
+                                LOG(INFO) << "Backend " << model.backend << " with ID: " << model.id << " was found and will be used for the current dispatch size format!" << std::endl;
                                 backendSpec = new BackendSpec(model.backend);
                                 break;
                             }
@@ -268,6 +287,7 @@ namespace skepu
                 SampleVec sample = j["sample"];
                 sm.sample        = std::move(sample); //j["sample"];
                 sm.time_count    = j["time"];
+                sm.id            = j["id"];
                 
             } 
 
@@ -298,19 +318,18 @@ namespace skepu
                 ep.models = std::move(models);
             } 
 
-            void to_json(json& j, Dimensionality const& d)
-            {
-                j = json{{"return", d.ret}, {"elementWise", d.elwise}, {"container", d.container}, {"uniform", d.uniform}};
-            }
-
             void to_json(json& j,  SizeModel const& sm) 
             {
                 std::ostringstream oss;
                 oss << sm.backend;
 
-                j = json{{"backend", oss.str()}, {"time", sm.time_count} , {"sample", sm.sample}};
+                j = json{{"backend", oss.str()}, {"time", sm.time_count} , {"sample", sm.sample}, {"id", sm.id}};
             }
 
+            void to_json(json& j, Dimensionality const& d)
+            {
+                j = json{{"return", d.ret}, {"elementWise", d.elwise}, {"container", d.container}, {"uniform", d.uniform}};
+            }
 
             void to_json(json& j, ExecutionPlan const& ep) 
             {
