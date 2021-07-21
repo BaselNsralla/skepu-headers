@@ -18,12 +18,12 @@ namespace skepu
 
 
 			namespace AT = autotune;
-			static const size_t Max_Dim = 2;
+			static const size_t MAX_DIM = 2;
 			using DimTransformer = std::function<AT::Size(AT::Size const&)>;
 				
 			inline AT::Size toOneDim(AT::Size const& md) {
 				size_t y = md.y == 0 ? 1 : md.y; // TODO Extending Size to more dimensions will require additional checks
-				return AT::Size{md.y * md.x, 0};
+				return AT::Size{y * md.x, 0};
 			};
 
 			struct args_tuple_base 
@@ -184,7 +184,7 @@ namespace skepu
 					for(size_t i = 0; i < dims.size() && i < sizes.size(); ++i) 
 					{
 						auto dim_value = dims[i];
-						if (dim_value == Max_Dim) {
+						if (dim_value == MAX_DIM) {
 							continue;
 						} else {
 							sizes[i] = toOneDim(sizes[i]); // toOneDim så länge dimvalue inte är (2)
