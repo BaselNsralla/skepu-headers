@@ -2,9 +2,9 @@
 #include <cstddef>
 #include <skepu3/external/json.hpp>
 #include <cmath>
+#include <skepu3/backend/logging/logger.h>
 
 using std::log2;
-
 template<typename T>
 size_t ulog2(T num) {
     return log2(num);
@@ -27,6 +27,7 @@ namespace skepu
                 {
                     auto t_equal = [&] (size_t& a, size_t& b) 
                     {
+                        //LOG(INFO) << "COMPARING " << a << " AND " << b << " WITH TOLERANCE " << tolerance << std::endl;
                         return (a == b) || ((a + tolerance) == b) || (a == (b+tolerance));
                     };
                     
