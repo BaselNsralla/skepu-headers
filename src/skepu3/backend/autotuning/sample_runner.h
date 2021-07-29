@@ -1,4 +1,3 @@
-
 #pragma once
 #include <iostream>
 #include <skepu3/impl/meta_helpers.hpp>
@@ -10,6 +9,7 @@
 #include <skepu3/backend/autotuning/sampler.h>
 #include <skepu3/backend/autotuning/arg_sequence.h>
 #include <skepu3/backend/logging/logger.h>
+#include <limits>
 
 #define STRINGIFY_(x) #x
 #define STRINGIFY(x) STRINGIFY_(x)
@@ -20,6 +20,7 @@ namespace skepu
     {
         namespace autotune
         {
+            using benchmark::TimeSpan;
             template<typename SamplerType, typename... PackIndicies>
             struct SampleRunner {};
 
@@ -31,7 +32,7 @@ namespace skepu
 
                 void run(SampleVec& data, std::vector<BackendSpec>& specs, ExecutionPlan& plan) {
                     
-                    std::pair<Backend::Type, benchmark::TimeSpan> bestDuration{Backend::Type::CPU, benchmark::TimeSpan::max()};
+                    std::pair<Backend::Type, TimeSpan> bestDuration{Backend::Type::CPU, TimeSpan::max()};
                     //LOG(DEBUG) << "Argument category size should be four: " << data.size() << std::endl;
                     auto args = sampler.sample(
                                 data,
@@ -43,7 +44,7 @@ namespace skepu
                     size_t repeats = 5; 
                     size_t size    = 0; // does not matter
                     //TODO Rest of sampling
-                    benchmark::measureForEachBackend(repeats, size, specs, 
+                    benchmark::measureMedianForEachBackend(repeats, size, specs, 
                         [&](size_t, BackendSpec spec) {
                             LOG(INFO) << "Running on backend " << spec.getType() << std::endl;
                             sampler.skeleton.setBackend(spec);
@@ -56,10 +57,12 @@ namespace skepu
                         [](benchmark::TimeSpan duration){
                             //std::cout << "Benchmark duration " << duration.count() << std::endl; 
                         },
-                        [&]  (Backend::Type backend, benchmark::TimeSpan duration) mutable {
+                        [&]  (Backend::Type backend, TimeSpan duration) mutable {
                             //(std::cout << "Median " << backend << " Took " << duration.count() << std::endl;
-                            if (duration < bestDuration.second) // && bestDuration.first != backend
+                            //std::cout << "COMPARING " << duration.count() << " VS " << bestDuration.second.count() << std::endl;
+                            if (duration.count() < bestDuration.second.count()) // && bestDuration.first != backend
                             {
+                                //std::cout << "PASSED WINNER " << backend << std::endl;
                                 //std::cout << "Change from " << bestDuration.first << " To " << backend << std::endl;
                                 bestDuration = {backend, duration};
                             }
@@ -68,8 +71,6 @@ namespace skepu
                                 std::get<OI>(args.resultArg)...,
                                 std::get<EI>(args.elwiseArg)...,
                                 std::get<CI>(args.containerArg)...);
-
-                        
                         }); 
 
                     sampler.cleanup();
@@ -96,7 +97,6 @@ namespace skepu
                             ArgDimType::uni_dim::toVector()
                         }
                     };
-
 
                     //plan.setSearchDimension() Tror det är bättre med konstruktor då vi behöver den alltid för consitency
                     auto allSamples = generate_sequence(sampler.skeleton, 
