@@ -113,7 +113,18 @@ namespace skepu
 			else if (s == "auto") return Type::CUDA;
 			else SKEPU_ERROR("Invalid string for backend type conversion");
 		}
-		
+	
+		static Scheduling schedulingTypeFromString(std::string s)
+		{
+			std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+			if (s == "static") return Scheduling::Static;
+			else if (s == "dynamic") return Scheduling::Dynamic;
+			else if (s == "guided") return Scheduling::Guided;
+			else if (s == "auto") return Scheduling::Auto;
+			else SKEPU_ERROR("Invalid string for backend type conversion");
+		}
+
+
 		static bool isTypeAvailable(Type type)
 		{
 			return type == Backend::Type::Auto ||
@@ -126,7 +137,7 @@ namespace skepu
 
 	
 	
-	inline std::ostream &operator<<(std::ostream &o, Backend::Type b)
+	inline std::ostream &operator<<(std::ostream &o, Backend::Type const b)
 	{
 		switch (b)
 		{

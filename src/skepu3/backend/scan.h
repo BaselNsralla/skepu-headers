@@ -5,6 +5,9 @@
 #ifndef SCAN_H
 #define SCAN_H
 
+#include "skepu3/backend/autotuning/tuneable.h"
+using namespace autotune;
+
 namespace skepu
 {
 	enum class ScanMode
@@ -35,7 +38,7 @@ namespace skepu
 		 *  or if vectors or iterators are used as parameters.
 		 */
 		template <typename ScanFunc, typename CUDAScan, typename CUDAScanUpdate, typename CUDAScanAdd, typename CLKernel>
-		class Scan : public SkeletonBase
+		class Scan : public SkeletonBase, public Tuneable<Scan<ScanFunc, CUDAScan, CUDAScanUpdate, CUDAScanAdd, CLKernel>> 
 		{
 			
 		public:
@@ -109,8 +112,20 @@ namespace skepu
 				if (arg.size() < size)
 					SKEPU_ERROR("Map: Non-matching container sizes");
 				
-				this->selectBackend(size);
+				this->finalizeTuning();
 				
+				this->selectBackend(
+					DispatchSize {
+						size,
+						{Size{size, 0}},
+						{Size{size, 0}},
+						{Size{0, 0}},
+						{Size{0, 0}}
+					}
+				);
+				//this->selectBackend(size);
+
+
 				switch (this->m_selected_spec->activateBackend())
 				{
 				case Backend::Type::Hybrid:

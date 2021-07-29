@@ -4,8 +4,12 @@
 
 #ifndef SKELETON_BASE_H
 #define SKELETON_BASE_H
-
-#include "skepu3/backend/environment.h"
+#include <tuple>
+#include <vector>
+#include <skepu3/backend/environment.h>
+#include <skepu3/backend/autotuning/execution_plan.h>
+#include <skepu3/backend/autotuning/size.h>
+#include <skepu3/backend/autotuning/dispatch_size.h>
 
 namespace skepu
 {
@@ -28,6 +32,14 @@ namespace skepu
 				
 				this->m_execPlan = plan;
 			}
+
+			void setTuneExecPlan(autotune::ExecutionPlan* plan) 
+			{
+				if (this->m_tunePlan != nullptr)
+					delete this->m_tunePlan;
+				this->m_tunePlan = plan;
+			}
+
 			
 			void setBackend(BackendSpec const& spec)
 			{
@@ -43,6 +55,11 @@ namespace skepu
 			
 			const BackendSpec& selectBackend(size_t size = 0)
 			{
+				// if  (false) {//this->m_tunePlan) {
+				// 	setBackend(this->m_tunePlan->optimalBackend(size));
+				// 	this->m_selected_spec = this->m_user_spec;
+				// }
+				//else 
 				if (this->m_user_spec)
 					this->m_selected_spec = this->m_user_spec;
 				else if (this->m_execPlan)
@@ -56,7 +73,31 @@ namespace skepu
 				return *this->m_selected_spec;
 			}
 			
-		protected:
+			const BackendSpec& selectBackend(autotune::DispatchSize size)
+			{
+
+					//setBackend(this->m_tunePlan->optimalBackend(size, *this->m_user_spec));
+				if  (this->m_tunePlan) //this->m_tunePlan) {
+					this->m_selected_spec = this->m_tunePlan->optimalBackend(size);
+				if (this->m_user_spec && !m_selected_spec)
+					this->m_selected_spec = this->m_user_spec;
+				else if (this->m_execPlan && !m_selected_spec)
+					this->m_selected_spec = &this->m_execPlan->find(size.legacy);
+				else if (!m_selected_spec)
+					this->m_selected_spec = &internalGlobalBackendSpecAccessor();
+				else {}
+			//	this->m_selected_spec = (this->m_user_spec != nullptr)
+			//		? this->m_user_spec
+			//		: &this->m_execPlan->find(size);
+				return *this->m_selected_spec;
+				//return *this->m_selected_spec;
+			}
+
+
+
+
+
+		public:
 			SkeletonBase()
 			{
 				this->m_environment = Environment<int>::getInstance();
@@ -92,6 +133,8 @@ namespace skepu
 			/*! this is the pointer to execution plan that is active and should be used by implementations to check numOmpThreads and cudaBlocks etc. */
 			ExecPlan *m_execPlan = nullptr;
 			
+			autotune::ExecutionPlan* m_tunePlan = nullptr;
+
 			const BackendSpec *m_user_spec = nullptr;
 			
 			const BackendSpec *m_selected_spec = nullptr;

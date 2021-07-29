@@ -5,6 +5,9 @@
 #ifndef MAPREDUCE_H
 #define MAPREDUCE_H
 
+#include "skepu3/backend/autotuning/tuneable.h"
+using namespace autotune;
+
 namespace skepu
 {
 	namespace backend
@@ -26,8 +29,10 @@ namespace skepu
 		*  takes whole containers (vectors, matrices).
 		*/
 		template<size_t arity, typename MapFunc, typename ReduceFunc, typename CUDAKernel, typename CUDAReduceKernel, typename CLKernel>
-		class MapReduce : public SkeletonBase
+		class MapReduce : public SkeletonBase, public Tuneable<MapReduce<arity, MapFunc, ReduceFunc, CUDAKernel, CUDAReduceKernel, CLKernel>>
 		{
+			using TuneableT = Tuneable<MapReduce<arity, MapFunc, ReduceFunc, CUDAKernel, CUDAReduceKernel, CLKernel>>;
+
 		public:
 			MapReduce(CUDAKernel mapreduce, CUDAReduceKernel reduce)
 			: m_cuda_kernel(mapreduce), m_cuda_reduce_kernel(reduce)
@@ -43,7 +48,6 @@ namespace skepu
 			using ContainerArgs = typename MapFunc::ContainerArgs;
 			using UniformArgs = typename MapFunc::UniformArgs;
 			static constexpr bool prefers_matrix = MapFunc::prefersMatrix;
-
 		private:
 			CUDAKernel m_cuda_kernel;
 			CUDAReduceKernel m_cuda_reduce_kernel;
@@ -55,10 +59,14 @@ namespace skepu
 			static constexpr size_t outArity = MapFunc::outArity;
 			static constexpr size_t numArgs = MapFunc::totalArity - (MapFunc::indexed ? 1 : 0);
 			static constexpr size_t anyArity = std::tuple_size<typename MapFunc::ContainerArgs>::value;
-			static constexpr typename make_pack_indices<outArity, 0>::type out_indices{};
-			static constexpr typename make_pack_indices<arity, 0>::type elwise_indices{};
-			static constexpr typename make_pack_indices<arity + anyArity, arity>::type any_indices{};
-			static constexpr typename make_pack_indices<numArgs, arity + anyArity>::type const_indices{};
+			using OutIndices    = typename make_pack_indices<outArity, 0>::type;
+			using ElwiseIndices = typename make_pack_indices<arity, 0>::type;
+			using AnyIndices    = typename make_pack_indices<arity + anyArity, arity>::type;
+			using ConstIndices  = typename make_pack_indices<numArgs, arity + anyArity>::type;
+			static constexpr  OutIndices out_indices{};
+			static constexpr  ElwiseIndices elwise_indices{};
+			static constexpr  AnyIndices any_indices{};
+			static constexpr  ConstIndices const_indices{};
 
 			using defaultDim = index_dimension<typename std::conditional<MapFunc::indexed, typename MapFunc::IndexType, skepu::Index1D>::type>;
 
@@ -127,7 +135,22 @@ namespace skepu
 				if (disjunction((get<EI, CallArgs...>(args...).size() < size)...))
 					SKEPU_ERROR("Non-matching container sizes");
 
-				this->selectBackend(size);
+				this->finalizeTuning();
+
+				auto dispatchSize = DispatchSize::Create(
+						TuneableT::tune_limit(),
+						size,
+						args_tuple<0>::empty(),
+						args_tuple<sizeof...(EI), CallArgs...>::template value<EI...>(std::forward<CallArgs>(args)...),
+						args_tuple<sizeof...(AI), CallArgs...>::template value<AI...>(std::forward<CallArgs>(args)...),
+						args_tuple<sizeof...(CI), CallArgs...>::template value<CI...>(std::forward<CallArgs>(args)...)
+					);
+				dispatchSize.collapseDimension(dispatchSize.elwiseSize);
+				this->selectBackend(
+					dispatchSize
+				);
+				
+				//this->selectBackend(size);
 
 				switch (this->m_selected_spec->activateBackend())
 				{

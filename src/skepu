@@ -1,5 +1,7 @@
 #pragma once
 
+// TODO Use logic here
+
 // Deprecated operators are still accessible in this version 
 #define SKEPU_ENABLE_DEPRECATED_OPERATOR
 
@@ -10,6 +12,15 @@
 #  define SKEPU_HYBRID_USE_CUDA
 # endif
 #endif
+
+#if defined(SKEPU_OPENMP) && (defined(SKEPU_CUDA) || defined(SKEPU_OPENCL))
+# define SKEPU_AUTOTUNE
+#endif
+
+#define CL_USE_DEPRECATED_OPENCL_1_2_APIS
+#define CL_TARGET_OPENCL_VERSION 200
+
+
 
 /* TODO: Get rid of this hack if possible. */
 #ifdef SKEPU_MERCURIUM_CUDA

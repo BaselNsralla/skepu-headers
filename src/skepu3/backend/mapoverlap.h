@@ -6,6 +6,8 @@
 #define MAPOVERLAP_H
 
 #include "skepu3/impl/region.hpp"
+#include "skepu3/backend/autotuning/tuneable.h"
+using namespace autotune;
 
 namespace skepu
 {
@@ -27,8 +29,9 @@ namespace skepu
 		 *  MapOverlap2D class can be used by including same header file (i.e., mapoverlap.h) but class name is different (MapOverlap2D).
 		 */
 		template<typename MapOverlapFunc, typename CUDAKernel, typename C2, typename C3, typename C4, typename CLKernel>
-		class MapOverlap1D: public SkeletonBase
+		class MapOverlap1D: public SkeletonBase, public Tuneable<MapOverlap1D<MapOverlapFunc, CUDAKernel, C2, C3, C4, CLKernel>>
 		{
+			using TuneableT = Tuneable<MapOverlap1D<MapOverlapFunc, CUDAKernel, C2, C3, C4, CLKernel>>;
 			using Ret = typename MapOverlapFunc::Ret;
 			using T = typename region_type<typename parameter_type<0, decltype(&MapOverlapFunc::CPU)>::type>::type;
 			
@@ -223,8 +226,46 @@ namespace skepu
 				typename make_pack_indices<anyCont, 0>::type any_indices;
 				typename make_pack_indices<sizeof...(CallArgs), anyCont>::type const_indices;
 				
-				this->selectBackend(arg.size());
-					
+				this->finalizeTuning();
+				//this->selectBackend(arg.size());
+
+				auto anyArgTup = args_tuple<anyCont,                     CallArgs...>::template value(any_indices, args...);
+				auto ciArgTup  = args_tuple<sizeof...(CallArgs)-anyCont, CallArgs...>::template value(const_indices, args...);
+				
+				DispatchSize targetSize {
+					arg.size(),
+					get_size(TuneableT::tune_limit(), std::make_tuple(res), seq<0u>()),
+					get_size(TuneableT::tune_limit(), std::make_tuple(arg), seq<0u>()),
+					get_size(TuneableT::tune_limit(), anyArgTup, gen_seq<std::tuple_size<decltype(anyArgTup)>::value>()),
+					get_size(TuneableT::tune_limit(), ciArgTup,  gen_seq<std::tuple_size<decltype(ciArgTup)>::value>())
+				};
+
+				// std::cout << "INSERTED DATA " << std::endl;
+				// for (auto& s: targetSize.outputSize) {
+				// 	std::cout << s.x << "|" << s.y << "  ,"; 
+				// }
+				// std::cout << std::endl;
+
+				// for (auto& s: targetSize.elwiseSize) {
+				// 	std::cout << s.x << "|" << s.y << "  ,"; 
+				// }
+				// std::cout << std::endl;
+
+				// for (auto& s: targetSize.containerSize) {
+				// 	std::cout << s.x << "|" << s.y << "  ,"; 
+				// }
+				// std::cout << std::endl;
+				
+				// for (auto& s: targetSize.uniformSize) {
+				// 	std::cout << s.x << "|" << s.y << "  ,"; 
+				// }
+				// std::cout << std::endl;
+
+
+				this->selectBackend(targetSize);
+
+
+
 				switch (this->m_selected_spec->activateBackend())
 				{
 				case Backend::Type::Hybrid:
@@ -262,11 +303,36 @@ namespace skepu
 					SKEPU_ERROR("MapOverlap 1D: Non-matching container sizes");
 				
 				static constexpr size_t anyCont = std::tuple_size<typename MapOverlapFunc::ContainerArgs>::value;
-				typename make_pack_indices<anyCont, 0>::type any_indices;
+				typename make_pack_indices<anyCont, 0u>::type any_indices;
 				typename make_pack_indices<sizeof...(CallArgs), anyCont>::type const_indices;
 				
-				this->selectBackend(arg.size());
+				this->finalizeTuning();
+				//this->selectBackend(arg.size());
+				// this->selectBackend(DispatchSize::Create(
+				// 	args_tuple<sizeof...(Re), CallArgs...>::template value<EI...>(args...)
+				// 	args_tuple<sizeof...(EI), CallArgs...>::template value<EI...>(args...),
+				// 	args_tuple<sizeof...(AI), CallArgs...>::template value<AI...>(args...),
+				// 	args_tuple<sizeof...(CI), CallArgs...>::template value<CI...>(args...),
+				// 	arg.size()
+
+				// ));
+				//std::tuple_size<T>{}
 				
+				auto anyArgTup = args_tuple<anyCont,                     CallArgs...>::template value(any_indices, std::forward<CallArgs>(args)...);
+				auto ciArgTup  = args_tuple<sizeof...(CallArgs)-anyCont, CallArgs...>::template value(const_indices, std::forward<CallArgs>(args)...);
+				// TODO: Always 1D or 2D in both operator()
+				DispatchSize ds {
+					arg.size(),
+					get_size(TuneableT::tune_limit(), std::make_tuple(res), seq<0u>()),
+					get_size(TuneableT::tune_limit(), std::make_tuple(arg), seq<0u>()),
+					get_size(TuneableT::tune_limit(), anyArgTup, gen_seq<std::tuple_size<decltype(anyArgTup)>::value>()),
+					get_size(TuneableT::tune_limit(), ciArgTup,  gen_seq<std::tuple_size<decltype(ciArgTup)>::value>())
+				};
+
+				this->selectBackend(ds);
+				
+
+
 				size_t numrows = arg.total_rows();
 				size_t numcols = arg.total_cols();
 					
@@ -412,24 +478,25 @@ namespace skepu
 		
 		
 		template<typename MapOverlapFunc, typename CUDAKernel, typename CLKernel>
-		class MapOverlap2D: public SkeletonBase
+		class MapOverlap2D: public SkeletonBase, public Tuneable<MapOverlap2D<MapOverlapFunc, CUDAKernel, CLKernel>>
 		{
+			using TuneableT = Tuneable<MapOverlap2D<MapOverlapFunc, CUDAKernel, CLKernel>>;
 			using Ret = typename MapOverlapFunc::Ret;
-			using T = typename region_type<typename parameter_type<(MapOverlapFunc::indexed ? 1 : 0), decltype(&MapOverlapFunc::CPU)>::type>::type;
-			using F = ConditionalIndexForwarder<MapOverlapFunc::indexed, decltype(&MapOverlapFunc::CPU)>;
+			using T   = typename region_type<typename parameter_type<(MapOverlapFunc::indexed ? 1 : 0), decltype(&MapOverlapFunc::CPU)>::type>::type;
+			using F   = ConditionalIndexForwarder<MapOverlapFunc::indexed, decltype(&MapOverlapFunc::CPU)>;
 			
 		public:
 			
 			static constexpr auto skeletonType = SkeletonType::MapOverlap2D;
-			using ResultArg = std::tuple<T>;
-			using ElwiseArgs = std::tuple<T>;
+			using ResultArg     = std::tuple<T>;
+			using ElwiseArgs    = std::tuple<T>;
 			using ContainerArgs = typename MapOverlapFunc::ContainerArgs;
-			using UniformArgs = typename MapOverlapFunc::UniformArgs;
+			using UniformArgs   = typename MapOverlapFunc::UniformArgs;
 			static constexpr bool prefers_matrix = false;
 			
-			static constexpr size_t arity = 1;
+			static constexpr size_t arity    = 1;
 			static constexpr size_t outArity = MapOverlapFunc::outArity;
-			static constexpr size_t numArgs = MapOverlapFunc::totalArity - (MapOverlapFunc::indexed ? 1 : 0) + outArity;
+			static constexpr size_t numArgs  = MapOverlapFunc::totalArity - (MapOverlapFunc::indexed ? 1 : 0) + outArity;
 			static constexpr size_t anyArity = std::tuple_size<typename MapOverlapFunc::ContainerArgs>::value;
 			
 			static constexpr typename make_pack_indices<outArity, 0>::type out_indices{};
@@ -529,7 +596,24 @@ namespace skepu
 			void helper_Hybrid(pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args);
 			
 #endif
-			
+
+
+		// inline void prt()
+		// {
+
+		// }
+
+		// template<typename First, typename... Rest>
+		// inline void prt(First&& first, Rest&&... rest)
+		// {
+		// 	std::cout << first << " ";
+		// }
+		
+		void prt(size_t size ) {
+			std::cout << size << " ";
+		}
+
+		 using context = std::initializer_list<int>;
 		public:
 			template<size_t... OI, size_t... EI, size_t... AI, size_t... CI, typename... CallArgs>
 			auto backendDispatch(pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args) -> decltype(get<0>(args...))
@@ -544,21 +628,48 @@ namespace skepu
 				
 				if (this->m_edge != Edge::None && disjunction(
 					(get<EI>(args...).size_i() != size_i) &&
-					(get<EI>(args...).size_j() != size_j) ...))
-					SKEPU_ERROR("Non-matching input container sizes");
+					(get<EI>(args...).size_j() != size_j) ...)){
+						context{ (prt(get<EI>(args...).size_i()),0)... }; 
+						std::cout << "!= " << size_i << std::endl;
+						context{ (prt(get<EI>(args...).size_j()),0)... }; 
+						std::cout  << "!= " << size_j << std::endl;
+			
+						SKEPU_ERROR("Non-matching input container sizes");
+
+					}
 				
 				if (this->m_edge == Edge::None && disjunction(
 					(get<EI>(args...).size_i() - this->m_overlap_y*2 != size_i) &&
 					(get<EI>(args...).size_j() - this->m_overlap_x*2 != size_j) ...))
 					SKEPU_ERROR("Non-matching input container sizes");
 				
+				//std::cout << get<EI>(args...).size_i() << " != " << size_i << std::endl;
+				//std::cout << get<EI>(args...).size_j() << " != " << size_j << std::endl;
+			
+			
+			
 				// Remove later
 				auto &res = get<0>(args...);
 				auto &arg = get<outArity>(args...);
 				// End remove
 				
-				this->selectBackend(get<0>(args...).size());
-					
+				this->finalizeTuning();
+				//this->selectBackend(get<0>(args...).size());
+
+				this->selectBackend(
+					DispatchSize::Create(
+						TuneableT::tune_limit(),
+						get<0>(args...).size(),
+						args_tuple<sizeof...(OI), CallArgs...>::template value<OI...>(args...),
+						args_tuple<sizeof...(EI), CallArgs...>::template value<EI...>(args...),
+						args_tuple<sizeof...(AI), CallArgs...>::template value<AI...>(args...),
+						args_tuple<sizeof...(CI), CallArgs...>::template value<CI...>(args...)
+					)
+				);
+
+
+
+
 				switch (this->m_selected_spec->activateBackend())
 				{
 				case Backend::Type::Hybrid:
@@ -604,7 +715,7 @@ namespace skepu
 		
 		
 		template<typename MapOverlapFunc, typename CUDAKernel, typename CLKernel>
-		class MapOverlap3D: public SkeletonBase
+		class MapOverlap3D: public SkeletonBase, public Tuneable<MapOverlap3D<MapOverlapFunc, CUDAKernel, CLKernel>>
 		{
 			using Ret = typename MapOverlapFunc::Ret;
 			using T = typename region_type<typename parameter_type<(MapOverlapFunc::indexed ? 1 : 0), decltype(&MapOverlapFunc::CPU)>::type>::type;
@@ -613,10 +724,10 @@ namespace skepu
 		public:
 			
 			static constexpr auto skeletonType = SkeletonType::MapOverlap3D;
-			using ResultArg = std::tuple<T>;
-			using ElwiseArgs = std::tuple<T>;
+			using ResultArg     = std::tuple<T>;
+			using ElwiseArgs    = std::tuple<T>;
 			using ContainerArgs = typename MapOverlapFunc::ContainerArgs;
-			using UniformArgs = typename MapOverlapFunc::UniformArgs;
+			using UniformArgs   = typename MapOverlapFunc::UniformArgs;
 			static constexpr bool prefers_matrix = false;
 			
 			static constexpr size_t arity = 1;
@@ -756,6 +867,7 @@ namespace skepu
 				auto &arg = get<outArity>(args...);
 				// End remove
 				
+				this->finalizeTuning();
 				this->selectBackend(get<0>(args...).size());
 					
 				switch (this->m_selected_spec->activateBackend())
@@ -803,7 +915,7 @@ namespace skepu
 		
 		
 		template<typename MapOverlapFunc, typename CUDAKernel, typename CLKernel>
-		class MapOverlap4D: public SkeletonBase
+		class MapOverlap4D: public SkeletonBase, public Tuneable<MapOverlap4D<MapOverlapFunc, CUDAKernel, CLKernel>>
 		{
 			using Ret = typename MapOverlapFunc::Ret;
 			using T = typename region_type<typename parameter_type<(MapOverlapFunc::indexed ? 1 : 0), decltype(&MapOverlapFunc::CPU)>::type>::type;

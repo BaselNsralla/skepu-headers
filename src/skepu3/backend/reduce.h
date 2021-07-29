@@ -6,6 +6,8 @@
 #define REDUCE_H
 
 #include "reduce_helpers.h"
+#include "skepu3/backend/autotuning/tuneable.h"
+using namespace autotune;
 
 namespace skepu
 {
@@ -42,7 +44,7 @@ namespace skepu
 		 * or 2 user function (i.e. 2D reduction). See code examples for more information.
 		 */
 		template<typename ReduceFunc, typename CUDAKernel, typename CLKernel>
-		class Reduce1D : public SkeletonBase
+		class Reduce1D : public SkeletonBase, public Tuneable<Reduce1D<ReduceFunc, CUDAKernel, CLKernel>>
 		{
 			
 		public:
@@ -164,13 +166,34 @@ namespace skepu
 			Vector<T> &operator()(Vector<T> &res, Matrix<T>& arg)
 			{
 			//	assert(this->m_execPlan != NULL && this->m_execPlan->isCalibrated());
-				
+				using namespace autotune;
 				const size_t size = arg.size();
 				
 				// TODO: check size
-				
-				this->selectBackend(size);
-				
+				this->finalizeTuning();
+				//this->selectBackend(size);
+				this->selectBackend(
+					DispatchSize {
+						size,
+						{Size{0, 0}},
+						{Size{size, 0}},
+						{Size{0, 0}},
+						{Size{0, 0}}
+					}
+				);
+				/*
+
+					DispatchSize::Create(
+						size,
+						args_tuple<0>::empty(),
+						args_tuple<1, Matrix<T>>::template value<0>(std::forward<Matrix<T>>(arg)),
+						args_tuple<0>::empty(),
+						args_tuple<0>::empty()
+					)
+
+				*/
+
+
 				VectorIterator<T> it = res.begin();
 				Matrix<T> &arg_tr = (this->m_mode == ReduceMode::ColWise) ? arg.transpose(*this->m_selected_spec) : arg;
 				

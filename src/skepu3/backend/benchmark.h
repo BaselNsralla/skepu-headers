@@ -1,6 +1,9 @@
 #pragma once
 
 #include <chrono>
+#include <numeric>
+#include <algorithm>
+#include <cstdint>
 
 namespace skepu
 {
@@ -59,6 +62,7 @@ namespace skepu
 	namespace benchmark
 	{
 		using TimeSpan = std::chrono::microseconds;
+		
 		
 		inline std::tuple<size_t, size_t, size_t>
 		parseArgs(int argc, char *argv[], size_t min = 1, size_t max = 1000, size_t reps = 10)
@@ -140,22 +144,28 @@ namespace skepu
 			std::nth_element(v.begin(), v.begin() + v.size() / 2, v.end());
 			return *std::next(v.begin(), v.size() / 2);
 		}
+
+		template<typename T>
+		inline T average(std::vector<T> &v)
+		{
+			return std::accumulate(v.begin(), v.end(), TimeSpan::zero()) / v.size();
+		}
 		
 		
 		using Callback = std::function<void(TimeSpan duration)>;
 		
 		inline void nullCallbackFn(TimeSpan duration) {}
 
-
-
 		using MedianBackendCallback = std::function<void(Backend::Type backend, TimeSpan duration)>;		
 		inline void nullMBCallbackFn(Backend::Type backend, TimeSpan duration) {}
 
-		template<typename BF>
+		template<typename BF, typename AF>
 		inline std::map<Backend::Type, TimeSpan> measureForEachBackend(
 										size_t repeats, size_t size, std::vector<BackendSpec> const& backends, BF f, 
+										AF aggregation,
 										Callback durationCallback = nullCallbackFn, 
-										MedianBackendCallback medianCallback = nullMBCallbackFn)
+										MedianBackendCallback medianCallback = nullMBCallbackFn
+										)
 		{
 			std::map<Backend::Type, TimeSpan> medianTimes;
 			for (auto &spec : backends)
@@ -170,11 +180,32 @@ namespace skepu
 				}
 				
 				// Find median execution time
-				medianCallback(spec.getType(), median(durations));
-				medianTimes.insert({spec.getType(), median(durations)});
+				auto result = aggregation(durations);
+				medianCallback(spec.getType(), result);
+				medianTimes.insert({spec.getType(), result});
 			}
 			return medianTimes;
 		}
+
+
+		template<typename BF>
+		inline std::map<Backend::Type, TimeSpan> measureMedianForEachBackend(
+										size_t repeats, size_t size, std::vector<BackendSpec> const& backends, BF f, 
+										Callback durationCallback = nullCallbackFn, 
+										MedianBackendCallback medianCallback = nullMBCallbackFn)
+		{
+			return measureForEachBackend(repeats, size, backends, f, &median<TimeSpan>, durationCallback, medianCallback);
+		}
+
+		template<typename BF>
+		inline std::map<Backend::Type, TimeSpan> measureAverageForEachBackend(
+										size_t repeats, size_t size, std::vector<BackendSpec> const& backends, BF f, 
+										Callback durationCallback = nullCallbackFn, 
+										MedianBackendCallback medianCallback = nullMBCallbackFn)
+		{
+			return measureForEachBackend(repeats, size, backends, f, &average<TimeSpan>, durationCallback, medianCallback);
+		}
+
 		
 		// Runs a skeleton instance with the currently set ExecPlan and BackendSpec ´repeats´ times
 		// and returns the median execution time

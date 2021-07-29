@@ -5,6 +5,9 @@
 #ifndef MAPPAIRSREDUCE_H
 #define MAPPAIRSREDUCE_H
 
+#include "skepu3/backend/autotuning/tuneable.h"
+using namespace autotune;
+
 namespace skepu
 {
 	namespace backend
@@ -18,8 +21,10 @@ namespace skepu
 		*  \brief A class representing the MapPairsReduce skeleton.
 		*/
 		template<size_t Varity, size_t Harity, typename MapPairsFunc, typename ReduceFunc, typename CUDAKernel, typename CUDAReduceKernel, typename CLKernel>
-		class MapPairsReduce : public SkeletonBase
+		class MapPairsReduce : public SkeletonBase, public Tuneable<MapPairsReduce<Varity, Harity, MapPairsFunc, ReduceFunc, CUDAKernel, CUDAReduceKernel, CLKernel>>
 		{
+
+			using TuneableT = Tuneable<MapPairsReduce<Varity, Harity, MapPairsFunc, ReduceFunc, CUDAKernel, CUDAReduceKernel, CLKernel>>;
 		public:
 			MapPairsReduce(CUDAKernel mappairsreduce, CUDAReduceKernel reduce)
 			: m_cuda_kernel(mappairsreduce), m_cuda_reduce_kernel(reduce)
@@ -113,7 +118,25 @@ namespace skepu
 					|| (this->m_mode == ReduceMode::ColWise && disjunction((get<OI>(args...).size() < Hsize)...)))
 					SKEPU_ERROR("Non-matching output container size");
 
-				this->selectBackend(Vsize + Hsize);
+				this->finalizeTuning();
+				//this->selectBackend(Vsize + Hsize);
+				
+				//args_tuple<sizeof...(OI), CallArgs...>::template value<OI...>(std::forward<CallArgs>(args)...),
+				auto dispatchSize = DispatchSize::Create(
+						TuneableT::tune_limit(),
+						size,
+						args_tuple<0>::empty(),
+						args_tuple<sizeof...(VEI) + sizeof...(HEI), CallArgs...>::template value<VEI..., HEI...>(std::forward<CallArgs>(args)...),
+						args_tuple<sizeof...(AI), CallArgs...>::template value<AI...>(std::forward<CallArgs>(args)...),
+						args_tuple<sizeof...(CI), CallArgs...>::template value<CI...>(std::forward<CallArgs>(args)...)
+					);
+				//dispatchSize.collapseDimension(dispatchSize.elwiseSize);
+				
+				this->selectBackend(
+					dispatchSize
+				);
+				
+
 
 				switch (this->m_selected_spec->activateBackend())
 				{

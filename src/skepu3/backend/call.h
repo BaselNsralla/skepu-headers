@@ -5,6 +5,10 @@
 #ifndef CALL_H
 #define CALL_H
 
+#include "skepu3/backend/autotuning/tuneable.h"
+
+using namespace autotune;
+
 namespace skepu
 {
 	namespace backend
@@ -24,7 +28,8 @@ namespace skepu
 		 *  takes whole containers (vectors, matrices). The container variants are merely wrappers for the functions which takes iterators as parameters.
 		 */
 		template<typename CallFunc, typename CUDAKernel, typename CLKernel>
-		class Call : public SkeletonBase
+		class Call : public SkeletonBase, public Tuneable<Call<CallFunc, CUDAKernel, CLKernel>>
+
 		{
 			static constexpr size_t numArgs = CallFunc::totalArity;
 			static constexpr size_t anyArity = std::tuple_size<typename CallFunc::ContainerArgs>::value;
@@ -111,9 +116,19 @@ namespace skepu
 			void backendDispatch(pack_indices<AI...> ai, pack_indices<CI...> ci, CallArgs&&... args)
 			{
 			//	assert(this->m_execPlan != NULL && this->m_execPlan->isCalibrated());
-				
-				this->selectBackend(0);
-				
+				this->finalizeTuning();
+				//this->selectBackend(0);
+					
+				this->selectBackend(
+					DispatchSize::Create(
+						0,
+						args_tuple<0, CallArgs...>::empty(),
+						args_tuple<0, CallArgs...>::empty(),
+						args_tuple<sizeof...(AI), CallArgs...>::template value<AI...>(std::forward<CallArgs>(args)...),
+						args_tuple<sizeof...(CI), CallArgs...>::template value<CI...>(std::forward<CallArgs>(args)...)
+					)
+				);
+
 				switch (this->m_selected_spec->activateBackend())
 				{
 				case Backend::Type::CUDA:

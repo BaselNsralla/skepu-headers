@@ -5,6 +5,9 @@
 #ifndef MAP_H
 #define MAP_H
 
+#include "skepu3/backend/autotuning/tuneable.h"
+
+using namespace autotune;
 namespace skepu
 {
 	namespace backend
@@ -24,10 +27,10 @@ namespace skepu
 		 *  takes whole containers (vectors, matrices). The container variants are merely wrappers for the functions which takes iterators as parameters.
 		 */
 		template<size_t arity, typename MapFunc, typename CUDAKernel, typename CLKernel>
-		class Map : public SkeletonBase
+		class Map : public SkeletonBase, public Tuneable<Map<arity, MapFunc, CUDAKernel, CLKernel>>
 		{
 			// ==========================    Type definitions   ==========================
-
+			using TuneableT = Tuneable<Map<arity, MapFunc, CUDAKernel, CLKernel>>;
 			using T = typename MapFunc::Ret;
 			using F = ConditionalIndexForwarder<MapFunc::indexed, decltype(&MapFunc::CPU)>;
 
@@ -69,7 +72,6 @@ namespace skepu
 			}
 
 			// =======================      Call operators      ==========================
-
 			template<typename... CallArgs>
 			auto operator()(CallArgs&&... args) -> decltype(get<0>(args...))
 			{
@@ -151,7 +153,19 @@ namespace skepu
 				if (disjunction((get<EI>(args...).size() < size)...))
 					SKEPU_ERROR("Non-matching input container sizes");
 
-				this->selectBackend(size);
+				
+				this->finalizeTuning();
+				//this->selectBackend(size);
+				this->selectBackend(
+					DispatchSize::Create(
+						TuneableT::tune_limit(),
+						size,
+						args_tuple<sizeof...(OI), CallArgs...>::template value<OI...>(args...),
+						args_tuple<sizeof...(EI), CallArgs...>::template value<EI...>(args...),
+						args_tuple<sizeof...(AI), CallArgs...>::template value<AI...>(args...),
+						args_tuple<sizeof...(CI), CallArgs...>::template value<CI...>(args...)
+					)
+				);
 
 				switch (this->m_selected_spec->activateBackend())
 				{

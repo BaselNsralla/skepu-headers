@@ -5,6 +5,9 @@
 #ifndef MAPPAIRS_H
 #define MAPPAIRS_H
 
+#include "skepu3/backend/autotuning/tuneable.h"
+using namespace autotune;
+
 namespace skepu
 {
 	namespace backend
@@ -21,10 +24,10 @@ namespace skepu
 		 *  Result is a Matrix.
 		 */
 		template<size_t Varity, size_t Harity, typename MapPairsFunc, typename CUDAKernel, typename CLKernel>
-		class MapPairs : public SkeletonBase
+		class MapPairs : public SkeletonBase, public Tuneable<MapPairs<Varity, Harity, MapPairsFunc, CUDAKernel, CLKernel>>
 		{
 			// ==========================    Type definitions   ==========================
-			
+			using TuneableT = Tuneable<MapPairs<Varity, Harity, MapPairsFunc, CUDAKernel, CLKernel>>;
 			using T = typename MapPairsFunc::Ret;
 			using F = ConditionalIndexForwarder<MapPairsFunc::indexed, decltype(&MapPairsFunc::CPU)>;
 			
@@ -42,6 +45,7 @@ namespace skepu
 			size_t default_size_y;
 			
 		public:
+			static constexpr bool prefers_matrix = true;
 			
 			static constexpr auto skeletonType = SkeletonType::MapPairs;
 			using ResultArg = std::tuple<T>;
@@ -155,8 +159,21 @@ namespace skepu
 				if (disjunction((get<HEI, CallArgs...>(args...).size() < Hsize)...))
 					SKEPU_ERROR("Non-matching horizontal container sizes");
 				
-				this->selectBackend(Vsize + Hsize);
-				
+				this->finalizeTuning();
+				//-cuda this->selectBackend(Vsize + Hsize);
+				this->selectBackend(
+					DispatchSize::Create(
+						TuneableT::tune_limit(),
+						Vsize + Hsize,
+						args_tuple<sizeof...(OI), CallArgs...>::template value<OI...>(std::forward<CallArgs>(args)...),
+						args_tuple<sizeof...(VEI) + sizeof...(HEI), CallArgs...>::template value<VEI..., HEI...>(std::forward<CallArgs>(args)...),
+						args_tuple<sizeof...(AI), CallArgs...>::template value<AI...>(std::forward<CallArgs>(args)...),
+						args_tuple<sizeof...(CI), CallArgs...>::template value<CI...>(std::forward<CallArgs>(args)...)
+					)
+				);
+
+
+
 				switch (this->m_selected_spec->activateBackend())
 				{
 				case Backend::Type::Hybrid:

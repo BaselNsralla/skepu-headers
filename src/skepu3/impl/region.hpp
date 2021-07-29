@@ -1,4 +1,4 @@
-
+#pragma once
 namespace future_std
 {
 	template<class T>
