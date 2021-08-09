@@ -23,7 +23,7 @@ namespace skepu {
             return std::pow(single_dim, 1/dim);
         }
     };
-    // TODO: (IMPORTANT) Should be generated from a file in the future
+    // TODO: (IMPORTANT) Should be read from a config file in the future
     static SampleLimit SampleQuota(Quota cap) 
     {
         switch(cap) {

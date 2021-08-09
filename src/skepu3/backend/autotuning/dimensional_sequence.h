@@ -4,29 +4,7 @@
 #include <tuple>
 using std::tuple;
 
-template<typename K, typename... Other>
-struct Pi {
-};
-
-template<typename... F>
-struct Kj {
-  using type = int;
-};
-
-
-template<typename... K>
-struct Com {
-};
-
-template<typename A, typename B>
-struct Hi {};
-
-template<typename... A, typename... B>
-struct Hi<Com<A...>, Com<B...>> {
-	using type = typename Kj<Pi<A, B...>...>::type;
-};
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// DEPRECATED ~~~~~~~~~~~~~~~~~~~~~~~~DEPRECATED~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ DEPRECATED
 
 
 // #####################################################

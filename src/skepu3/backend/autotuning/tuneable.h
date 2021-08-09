@@ -45,7 +45,6 @@ namespace skepu
                     static T value = 0; 
                     return value++;
                 }
-                //static const T value = []() { std::uniform_int_distribution<int> dist; std::mt19937 mt((std::random_device()())); return dist(mt); }();
             };
 
             template<typename Skeleton>
@@ -54,7 +53,7 @@ namespace skepu
                 /*
                     TODO: Choose between Tuning methods here as a param to autotuning
                 */
-                string tuneId   = std::to_string(Incremental<long long>::next());
+                string tuneId   = std::to_string(Incremental<long long>::next()); // In future C++ version this can be done through generators
 
             private:
                 SampleLimit sample_quota;
@@ -98,7 +97,7 @@ namespace skepu
                 {
                     return sample_quota;
                 }
-                //static const long long tuneId = Incremental<long>::value;//::next(); 
+
                 void autotuning(Quota quota = Quota::LOW, BackendSpecInput specInput = BackendSpecInput(), TuneExecutionPolicy policy = TuneExecutionPolicy::seq) 
                 {   
                     // TODO: switch tuneType
@@ -118,11 +117,6 @@ namespace skepu
                         
                         tuningThreadId = thread.get_id();
                         thread.detach();
-                        // future = std::async(std::launch::async, [&]{ 
-                        //     autotune::ExecutionPlan plan = samplingWrapper(skeleton); 
-                        //     skeleton.useTuning.store(true);
-                        //     return plan;
-                        // });
                     } else 
                     {
                         future = promise.get_future();
@@ -144,35 +138,6 @@ namespace skepu
                     skeleton.setTuneExecPlan(new ExecutionPlan(std::move(future.get()))); // TOOD: transfer ownership instead.
                     return true;
                 }
-
-                // Calling this function should alway be after checking the availability, otherwise you get an invalid executionplan or null
-                // ExecutionPlan& getPlan() {
-                //     return plan;
-                // }
-
-                /*
-                    It would have been nice to have the plan in the skeletonBase which is possible
-                    but due to asynchrounous support it won't be as clean.
-                    In case async solution does not yield great results, this will be moved to SkeletonBase
-                */
-
-                // const BackendSpec& selectTunedBackend(size_t size) 
-                // {
-                    
-                //     T& skeleton = *(static_cast<T*>(this));
-                //     if(!skeleton.useTuning.load() && finalizeTuning()) 
-                //     {
-                //         skeleton.setBackend(plan.optimalBackend(size));
-                //     }
-                //     //std::cout << "SIze " << size << std::endl;
-                //     return skeleton.selectBackend(size);
-                // }
-                
-
-                // virtual ~Tuneable() {
-                //     delete plan;
-                // }
-
             };
         }
     }

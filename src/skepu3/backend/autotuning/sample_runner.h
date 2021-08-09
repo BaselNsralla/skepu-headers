@@ -58,15 +58,10 @@ namespace skepu
                             //std::cout << "Benchmark duration " << duration.count() << std::endl; 
                         },
                         [&]  (Backend::Type backend, TimeSpan duration) mutable {
-                            //(std::cout << "Median " << backend << " Took " << duration.count() << std::endl;
-                            //std::cout << "COMPARING " << duration.count() << " VS " << bestDuration.second.count() << std::endl;
                             if (duration.count() < bestDuration.second.count()) // && bestDuration.first != backend
                             {
-                                //std::cout << "PASSED WINNER " << backend << std::endl;
-                                //std::cout << "Change from " << bestDuration.first << " To " << backend << std::endl;
                                 bestDuration = {backend, duration};
                             }
-
                             skepu::containerutils::updateHostAndInvalidateDevice(
                                 std::get<OI>(args.resultArg)...,
                                 std::get<EI>(args.elwiseArg)...,
@@ -98,7 +93,7 @@ namespace skepu
                         }
                     };
 
-                    //plan.setSearchDimension() Tror det är bättre med konstruktor då vi behöver den alltid för consitency
+                    //plan.setSearchDimension() Tror det är bättre med konstruktor då vi behöver den alltid för consistency
                     auto allSamples = generate_sequence(sampler.skeleton, 
                                                         typename ArgDimType::ret_dim(),
                                                         typename ArgDimType::elwise_dim(),
@@ -108,7 +103,6 @@ namespace skepu
 
                     //FÖR VARJE I Is... kör run => run kör sample och benchmark och vi får resultat in i
                     //en plan variabel som skapas i konstruktorn här
-                    //std::cout << "AMOUNT OF SAMPLES :" << allSamples.size() << std::endl;
                     size_t i = 1;
                     for (auto& sample: allSamples) 
                     {   
