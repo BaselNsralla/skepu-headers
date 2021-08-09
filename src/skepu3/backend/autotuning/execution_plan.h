@@ -16,30 +16,10 @@
 // for convenience
 using json = nlohmann::json;
 
-// template<typename T>
-// struct SerachFunctor 
-// {   
-//     //bool sameAsBefore = false; checks if in range find the position wher > is followed be < or vice versa
-
-//     bool operator()(const T& a, const T& b) 
-//     {
-        
-//     }
-// };
-
-/*
-    There are two possible solution I have thought of,
-        1 -> Map of type:vector<Ranges> and we binary search in each
-        of the type,
-
-        2 -> Vector of ranges
-*/
-
 namespace skepu
 {
 	namespace backend 
 	{
-
         class UniqueID {
         protected:
             static size_t nextID;
@@ -95,7 +75,6 @@ namespace skepu
                             break;
                         }
                     }
-                    //std::cout << " " << std::endl;
                     return equal;
                 }
 
@@ -125,8 +104,6 @@ namespace skepu
 
             struct ExecutionPlan
             {
-                //BackendRanges ranges;
-//        public:
                 string id;
                 Dimensionality dims;
                 ModelVec models;
@@ -154,54 +131,13 @@ namespace skepu
                     /* TODO: Make sure these come sorted
                         - If we add something that is bigger than the previous range we fail
                     */ 
-                    
-                    //size_t rangeStart = ranges.size() > 0 ? ranges.back().second.second : 0;
                     models.push_back(std::move(model)); 
                 }
-
-                // Backend::Type optimalBackend(SizeRange range) 
-                // {} hitta lower och upper bound?
-
-                // DispatchSize max(DispatchSize& ts, size_t maximum) 
-                // {   
-                //     std::vector<AT::Size> m_output(ts.outputSize.size());
-
-                //     std::transform(ts.outputSize.begin(), ts.outputSize.end(), m_output.begin(), 
-                //     [&maximum](AT::Size const& size) {
-                //         return AT::Size{std::max(size.x, maximum), std::max(size.y, maximum)};
-                //     });
-                //     /*
-                //     return DispatchSize { 
-                //         std::max(ts.legacy, maximum),    
-                //     }
-                //     */
-                // }
 
                 BackendSpec* optimalBackend(DispatchSize& targetSize)
                 {
                     // NOTE: Dispatched size kommer ha samma vector size på varje argument. Always right
-
                     targetSize.matchDimensions(dims);
-                    // LOG(INFO) << "Finding a backend for the following dispatch size format:" << std::endl;
-                    // for (auto& s: targetSize.outputSize) {
-                    //     std::cout << s.x << "|" << s.y << "  ,"; 
-                    // }
-                    // std::cout << std::endl;
-
-                    // for (auto& s: targetSize.elwiseSize) {
-                    //     std::cout << s.x << "|" << s.y << "  ,"; 
-                    // }
-                    // std::cout << std::endl;
-
-                    // for (auto& s: targetSize.containerSize) {
-                    //     std::cout << s.x << "|" << s.y << "  ,"; 
-                    // }
-                    // std::cout << std::endl;
-                    
-                    // for (auto& s: targetSize.uniformSize) {
-                    //     std::cout << s.x << "|" << s.y << "  ,"; 
-                    // }
-                    // std::cout << std::endl;
                     BackendSpec* backendSpec = nullptr;
                     auto timeTakenStep1 = skepu::benchmark::measureExecTime([&]
                     {

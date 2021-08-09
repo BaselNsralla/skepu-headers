@@ -64,38 +64,9 @@ namespace skepu
         {
             std::vector<size_t> result{dims...};
             return result;
-            //context { (result.push_back(dims), 0)...};
         }
-
     };
 
-
-    // template<typename A, typename B, typename C, typename D>
-    // struct arg_dim_bound {};
-
-    // template<typename A, typename B, typename C, typename D>
-    // struct arg_dim_inferred {};
-
-    // template<typename... Ret, typename... Elwise, typename... Cont, typename... Uni>
-    // struct arg_dim_bound<tuple<Ret...>, tuple<Elwise...>, tuple<Cont...>, tuple<Uni...>>
-    // {
-    //     using ret_dim    = Dimensions<dimension_impl<typename std::decay<Elwise>::type>::value...>;
-    //     using elwise_dim = Dimensions<dimension_impl<typename std::decay<Elwise>::type>::value...>;
-    //     using cont_dim   = Dimensions<dimension_impl<typename std::decay<Cont>::type>::value...>;
-    //     using uni_dim    = Dimensions<dimension_impl<typename std::decay<Uni>::type>::value...>;
-
-    // };
-
-    // template<typename... Ret, typename... Elwise, typename... Cont, typename... Uni>
-    // struct arg_dim_inferred<tuple<Ret...>, tuple<Elwise...>, tuple<Cont...>, tuple<Uni...>>
-    // {
-    //     using ret_dim    = Dimensions<dimension<Ret>::value...>;
-    //     using elwise_dim = Dimensions<dimension<Elwise>::value...>;
-    //     using cont_dim   = Dimensions<dimension<Cont>::value...>;
-    //     using uni_dim    = Dimensions<dimension<Uni>::value...>;
-
-    // };
-    
     template<typename T>
     struct deduced_dimensionality {};
 
@@ -149,8 +120,7 @@ namespace skepu
         using type = typename unfold< typename consume_dim< tuple<OR...>, tuple<OT...> >::type, Dimensions<dimension_impl<typename decay<T>::type>::value > > ::type; 
     };
 
-
-    // Master is second
+    // Master is T
     template<typename R, typename T>
     struct master_deduced_dimensionality {};
 
@@ -200,10 +170,10 @@ namespace skepu
 
     struct ArgDimReduce 
     {
-        using ret_dim    = Dimensions<>;//typename master_deduced_dimensionality<typename Skeleton::ResultArg, typename Skeleton::ElwiseArgs>::type; // TODO: This could make it slower  if elwise is bigger than return args
-        using elwise_dim = Dimensions<1>;//typename deduced_dimensionality<typename Skeleton::ElwiseArgs>::type; 
-        using cont_dim   = Dimensions<>;//typename deduced_dimensionality<typename Skeleton::ContainerArgs>::type; 
-        using uni_dim    = Dimensions<>;//typename deduced_dimensionality<typename Skeleton::UniformArgs>::type; 
+        using ret_dim    = Dimensions<>; 
+        using elwise_dim = Dimensions<1>;
+        using cont_dim   = Dimensions<>;
+        using uni_dim    = Dimensions<>;
     };
 
     template<typename Skeleton, bool prefersMatrix>
@@ -215,7 +185,6 @@ namespace skepu
     template<typename Skeleton>
     struct ArgDimInit
     {
-        //using type = Skeleton::skeletonType == SkeletonType::MapOverlap2D ? MapOverlap2DArg
         using type = ArgDim<Skeleton, Skeleton::skeletonType>;
     };
 
@@ -227,6 +196,4 @@ namespace skepu
         DimUnit container;
         DimUnit uniform;
     };
-
-
 };

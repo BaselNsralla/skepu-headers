@@ -47,7 +47,8 @@ namespace skepu
 
             using context = std::initializer_list<int>;
 
-            enum class Mechanism {
+            enum class Mechanism 
+            {
                 ALL,
                 SYMETRIC
             };
@@ -58,7 +59,7 @@ namespace skepu
             {
                 std::vector<InputType> input;
                 std::vector<OutputType> permutation_sequence;
-                //Mechanism constructor
+                // TODO: Mechanism constructor
 
                 void add(InputType&& possibilites) 
                 { // && och std::move
@@ -73,7 +74,6 @@ namespace skepu
                     }
                     
                     auto first = input[0];
-                    //for (auto& startItem: first) // Impolementera Iterator för InputType
                     size_t i = 0;
                     for(auto it = first.begin(); it != first.end(); ++it)
                     {
@@ -185,7 +185,6 @@ namespace skepu
                     }
                     
                     auto first = input[0];
-                    //for (auto& startItem: first) // Impolementera Iterator för ArgPerm
                     size_t i = 0;
                     for(auto it = first.begin(); it != first.end(); ++it)
                     {
@@ -267,7 +266,6 @@ namespace skepu
 
             };
 
-
             template<bool permutate>
             std::vector<Size> sizes2D(SampleLimit limit);
 
@@ -303,43 +301,6 @@ namespace skepu
                 }
                 return sizes;
             }
-
-            // // std::array istället?
-            // template<bool tuneFactor, typename T>
-            // std::vector<Size> combinations(T) 
-            // {   
-            //     std::cout << typeid(T).name() << std::endl;
-            //     return sizes1D();
-            // }
-
-            // // std::array istället?
-            // template<bool tuneFactor, typename T>
-            // std::vector<Size> combinations(skepu::MatCol<T>) 
-            // {
-            //     return sizes2D<tuneFactor>();
-            // }
-
-            // // std::array istället?
-            // template<bool tuneFactor, typename T>
-            // std::vector<Size> combinations(skepu::MatRow<T>) 
-            // {
-            //     return sizes2D<tuneFactor>();
-            // }
-
-            // // std::array istället?
-            // template<bool tuneFactor, typename T>
-            // std::vector<Size> combinations(skepu::Mat<T>) 
-            // {
-            //     return sizes2D<tuneFactor>();
-            // }
-
-            // // std::array istället?
-            // template<bool tuneFactor, typename T>
-            // std::vector<Size> combinations(skepu::Region2D<T>) 
-            // {
-            //     return sizes2D<tuneFactor>();
-            // }
-
 
             template<bool tuneFactor, size_t dimensionality>
             std::vector<Size> combinations(SampleLimit limit) 
@@ -392,39 +353,11 @@ namespace skepu
                 return argSize;
             };
 
-            
-
-
-            // template<typename T>
-            // void resolve_complexity(Ultra<T>) {
-            //     arg_combinations<T>;...
-            // }
-
-
-            // template<typename T>
-            // void resolve_complexity(Standard<T>) {
-            //     arg_combinations<T>;...
-            // }
-
-
             template<typename... T>
             ArgCatPerm resolve_form(SampleLimit limit, Group<T...>) {
                 ArgCatPerm perm;
                 context { (perm.add(arg_combinations(limit, T(), false)), 0)... }; //assert all are of same container (Standard)
                 perm.permutations(Mechanism::SYMETRIC);
-                // for (auto& a: perm.permutation_sequence) {
-                //     std::cout << "{ ";
-                //     for(auto& b: a) { // Arg permutations
-                //         std::cout << " { ";
-                //         for(auto& c: b) {
-                //             std::cout << c.x << "|" << c.y << ", ";
-                //         }
-                //         std::cout << "}";
-                //     }
-                //     std::cout << " } \n";
-                // }
-
-
                 return perm;
             }
 
@@ -433,57 +366,16 @@ namespace skepu
                 ArgCatPerm perm;
                 context { (perm.add(arg_combinations(limit, T(), true)), 0) }; 
                 perm.permutations();
-                // std::cout << "CATEGORY:: \n";
-                
-                // // Det här make:ar sense
-                // for (auto& a: perm.input) {
-                //     std::cout << "{ ";
-                //     for(auto& b: a) { // Arg permutations
-                //         std::cout << " { ";
-                //         for(auto& c: b) {
-                //             std::cout << c.x << "|" << c.y << ", ";
-                //         }
-                //         std::cout << "}";
-                //     }
-                //     std::cout << " } \n";
-                // }
-
                 return perm;
             }
-
-
-
 
             template<typename... T>
             ArgSequence configured_sequence(SampleLimit limit, Permutation<T...>) {
                 ArgSequence seq;
                 context { (seq.add(resolve_form(limit, T())), 0)... };
                 seq.permutations();
-
-                // for (auto& a: seq.input) { // En hel sample för varje element
-                //     std::cout << "{" << std::endl;
-                //     for (auto& b: a) { // En hel variabel Input, output, uniform och gänget 
-                //         std::cout << "\t\t {" << std::endl;
-                //         for (auto& c: b)  // Size?
-                //         {   
-                //             std::cout << "\t\t\t\t";
-                //             for (auto& d: c) {
-                //                 std::cout << d.x << ", ";
-
-                //             }
-
-                //         }
-                //         std::cout << "\n\t\t }" << std::endl;
-                //     } 
-                //     std::cout << "} \n\n" << std::endl;
-                // }
-
-
-            
-            
                 return seq;
             }   
-
             
             template<SkeletonType type>
             struct generate_sequence_impl {
@@ -515,7 +407,6 @@ namespace skepu
                                         Dimensions<cont...>,
                                         Dimensions<uni...>) 
                 {   
-                   
                     ArgSequence argSeq = configured_sequence(
                         limit,
                         Permutation<
@@ -527,8 +418,6 @@ namespace skepu
                     );
                     return argSeq;
                 }
-
-
             };
 
             struct reduce_sequence 
@@ -551,7 +440,6 @@ namespace skepu
                             Single<Ultra<Dimensions<uni...>>>
                         >()
                     );
-                    
                     return argSeq;
                 }
             };
@@ -581,23 +469,6 @@ namespace skepu
                 LOG(INFO) << "Generating all argument sequences..." << std::endl;
                 ArgSequence argSeq = generate_sequence_impl<Skeleton::skeletonType>::generate(skeleton.tune_limit(), r, e, c, u);
                 LOG(INFO) << "Sequence generation DONE!" << std::endl;
-                // std::ofstream ostrm("sequences.json", std::ios::trunc);
-                // ostrm << "DONE SAMPLING " << argSeq.input.size() << std::endl;
-                // for (auto& a: argSeq.samples) 
-                // { // En hel sample för varje element
-                //     ostrm << "{" << std::endl;
-                //     for (auto& b: a) 
-                //     { // En hel variabel Input, output, uniform och gänget 
-                //         ostrm << "    {" << std::endl;
-                //         ostrm<< "\t";
-                //         for (auto& c: b)  // Size?
-                //         {
-                //         ostrm << c.x <<  "|" << c.y << ", ";
-                //         }
-                //     ostrm << "\n    }" << std::endl;
-                //     } 
-                //     ostrm << "} \n" << std::endl;
-                // }
                 return argSeq;
             }
         }

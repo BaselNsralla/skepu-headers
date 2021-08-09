@@ -75,8 +75,6 @@ namespace skepu
 			template<size_t... Is>
 			struct gen_seq<0, Is...> : seq<Is...> { };
 
-			
-
 			using AltSizeFunc = std::function<AT::Size(void)>;
 
 			static AltSizeFunc defaultAltSize = [] () {
@@ -124,8 +122,6 @@ namespace skepu
 			template<typename... T, size_t... I>
 			std::vector<AT::Size> get_size(SampleLimit limit, std::tuple<T...> paramGroup, seq<I...>, AltSizeFunc altSize = defaultAltSize) 
 			{
-				//auto l = { (f(std::get<Is>(t)), 0)... }; ret l i värsta fall?
-				//context { (argSize.add(combinations<false>(Types())), 0)... };
 				std::vector<AT::Size> result{ get_size_impl(limit, std::get<I>(paramGroup), altSize)... };
 				if (result.size() == 0) {
 					result.push_back(AT::Size{0u,0u});
@@ -163,9 +159,7 @@ namespace skepu
 
 					return d;
 				}
-				
-				
-			
+						
 				void collapseDimension(std::vector<AT::Size>& someArg, DimTransformer transformer = toOneDim) 
 				{
 					std::vector<AT::Size> collapsed(someArg.size());
@@ -190,7 +184,6 @@ namespace skepu
 							sizes[i] = toOneDim(sizes[i]); // toOneDim så länge dimvalue inte är (2)
 						}
 					}
-
 				}
 
 				void matchDimensions(Dimensionality const& dims) {
